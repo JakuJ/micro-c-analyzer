@@ -6,32 +6,34 @@ cabal-version: 1.12
 
 name:           micro-c-analyzer
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/micro-c-analyzer#readme>
-homepage:       https://github.com/githubuser/micro-c-analyzer#readme
-bug-reports:    https://github.com/githubuser/micro-c-analyzer/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2021 Author name here
+description:    Please see the README on GitHub at <https://github.com/JakuJ/micro-c-analyzer#readme>
+homepage:       https://github.com/JakuJ/micro-c-analyzer#readme
+bug-reports:    https://github.com/JakuJ/micro-c-analyzer/issues
+author:         Ali El-Madani, Jakub Janaszkiewicz, Daniel Larsen
+maintainer:     janaszkiewicz.jakub@gmail.com
+copyright:      2021 Ali El-Madani, Jakub Janaszkiewicz, Daniel Larsen
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/micro-c-analyzer
+  location: https://github.com/JakuJ/micro-c-analyzer
 
 library
   exposed-modules:
-      Lib
+      Language.MicroC.AST
+      Language.MicroC.Parser
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , megaparsec
+    , text
   default-language: Haskell2010
 
 executable micro-c-analyzer-exe
@@ -43,7 +45,9 @@ executable micro-c-analyzer-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , megaparsec
     , micro-c-analyzer
+    , text
   default-language: Haskell2010
 
 test-suite micro-c-analyzer-test
@@ -56,5 +60,8 @@ test-suite micro-c-analyzer-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , hspec
+    , megaparsec
     , micro-c-analyzer
+    , text
   default-language: Haskell2010
