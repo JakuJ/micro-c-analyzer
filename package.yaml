@@ -15,6 +15,20 @@ dependencies:
 - base >= 4.7 && < 5
 - text
 - megaparsec
+- mtl
+- containers
+
+ghc-options:
+  # optimization
+  - -flate-dmd-anal
+  - -flate-specialise
+  # warnings
+  - -Wall
+  - -Wcompat
+  - -Wno-unused-do-bind
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
 
 library:
   source-dirs: src
@@ -24,6 +38,7 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -O2
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
