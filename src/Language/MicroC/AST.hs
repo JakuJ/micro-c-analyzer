@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds    #-}
-{-# LANGUAGE GADTs        #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
 module Language.MicroC.AST
@@ -24,8 +25,6 @@ module Language.MicroC.AST
 , OpBool(..)
 ) where
 
-import           Data.Kind (Type)
-
 -- | Represents a type in the MicroC language.
 data CType
   -- | The __int__ type.
@@ -33,8 +32,8 @@ data CType
   -- | The type of Boolean expressions.
   | CBool
 
--- | A mapping from MicroC types to the Haskell types used to represent their runtime values.
-type family TypeRepr (t :: CType) :: Type where
+-- | An injective mapping from MicroC types to the Haskell types used to represent their runtime values.
+type family TypeRepr (t :: CType) = q | q -> t where
   TypeRepr 'CInt = Int
   TypeRepr 'CBool = Bool
 
@@ -62,8 +61,6 @@ data RValue (t :: CType) where
   Reference :: LValue t -> RValue t
   -- | A reference to a literal value.
   Literal :: TypeRepr t -> RValue t
-  -- | A boolean constant i.e. 'True' or 'False'.
-  Constant :: Bool -> RValue 'CBool
   -- | An application of a binary arithmetic operator.
   OpA :: RValue 'CInt -> OpArith -> RValue 'CInt -> RValue 'CInt
   -- | An application of a relational operator.
@@ -106,7 +103,9 @@ data Statement where
   -- | A __while__ statement.
   While :: RValue 'CBool -> Statements -> Statement
   -- | A __read__ statement.
-  Read :: LValue t -> Statement
+  Read :: Read (TypeRepr t) => LValue t -> Statement
+  -- | A __write__ statement.
+  Write :: Show (TypeRepr t) => RValue t -> Statement
 
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]

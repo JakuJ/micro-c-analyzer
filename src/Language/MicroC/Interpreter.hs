@@ -1,10 +1,12 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE LambdaCase       #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Language.MicroC.Interpreter
 ( Memory
+, MonadEval(..)
 , evalProgram
 ) where
 
@@ -15,26 +17,34 @@ import           Language.MicroC.AST
 -- | The type of the internal state of the interpreter - a mapping from variable names to their values.
 type Memory = M.Map Identifier Int
 
-{- |
-    Interpret a 'Program' assuming some initial state of the 'Memory'.
-    Returns the state of the 'Memory' after evaluation.
--}
-evalProgram :: Program -> Memory -> Memory
-evalProgram (Program decls stats) = execState (evalDecls decls >> evalStats stats)
+-- | The interpretation monad defining abstract IO operations.
+class Monad m => MonadEval m where
+    -- | Implements the __read__ statement.
+    evalRead :: Read (TypeRepr t) => m (TypeRepr t)
+    -- | Implements the __write__ statement.
+    evalWrite :: Show (TypeRepr t) => TypeRepr t -> m ()
+
+-- | The monadic stack consisting of 'StateT' (variable store) and 'MonadEval' (__read__ / __write__).
+type Env m x = StateT Memory m x
+
+-- | Interprets a 'Program' and returns the computation in the 'MonadEval' monad.
+-- This can be then executes resulting in the state of the 'Memory' after program completion.
+evalProgram :: MonadEval m => Program -> m Memory
+evalProgram (Program decls stats) = execStateT (evalDecls decls >> evalStats stats) M.empty
 
 -- Helpers
-evalStats :: [Statement] -> State Memory ()
+evalStats :: MonadEval m => Statements -> Env m ()
 evalStats = mapM_ evalStat
 
-evalDecls :: [Declaration] -> State Memory ()
+evalDecls :: Monad m => Declarations -> Env m ()
 evalDecls = mapM_ evalDecl
 
 -- Declarations
-evalDecl :: Declaration -> State Memory ()
-evalDecl (VariableDecl name) = modify (M.insertWith (\ _ x -> x) name 0) -- set to 0 if not present
+evalDecl :: Monad m => Declaration -> Env m ()
+evalDecl (VariableDecl name) = modify $ M.insert name 0
 
 -- Statements
-evalStat :: Statement -> State Memory ()
+evalStat :: MonadEval m => Statement -> Env m ()
 evalStat (Assignment (Variable name) rval) = do
     r <- evalR rval
     modify $ M.insert name r
@@ -46,9 +56,11 @@ evalStat loop@(While cond body) = do
     when true $ do
         evalStats body
         evalStat loop
+evalStat (Read (Variable name)) = modify . M.insert name =<< lift evalRead
+evalStat (Write rval) = lift . evalWrite =<< evalR rval
 
 -- R-values
-evalR :: RValue t -> State Memory (TypeRepr t)
+evalR :: Monad m => RValue t -> Env m (TypeRepr t)
 evalR (Reference (Variable name)) = gets (M.! name)
 evalR (Literal v) = pure v
 evalR (OpA l op r) = op2fun op <$> evalR l <*> evalR r
