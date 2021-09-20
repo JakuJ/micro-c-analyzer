@@ -74,3 +74,4 @@ evalR (OpR l op r) = op2fun op <$> evalR l <*> evalR r
         op2fun = \case
             Lt -> (<)
             Neq -> (/=)
+            Le -> (<=)

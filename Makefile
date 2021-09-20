@@ -16,7 +16,7 @@ all : Grammar/Test
 
 # Rules for building the parser.
 
-Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs Grammar/Test.hs : Grammar.cf
+Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
 	bnfc --haskell -d Grammar.cf
 
 %.hs : %.y
@@ -25,8 +25,8 @@ Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs Grammar/Test.hs : Gr
 %.hs : %.x
 	${ALEX} ${ALEX_OPTS} $<
 
-Grammar/Test : Grammar/Abs.hs Grammar/Lex.hs Grammar/Par.hs Grammar/Print.hs Grammar/Test.hs
-	${GHC} ${GHC_OPTS} $@
+Grammar/Test : Grammar/Abs.hs Grammar/Lex.hs Grammar/Par.hs Grammar/Print.hs
+	${GHC} ${GHC_OPTS} $@ && rm Grammar/Test.hs
 
 # Rules for cleaning generated files.
 

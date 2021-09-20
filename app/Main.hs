@@ -15,7 +15,7 @@ instance MonadEval IOEval where
 
 main :: IO ()
 main = do
-    prog <- parseProgram "sources/even.c"
+    prog <- parseProgram "sources/factorial.c"
     case prog of
         Left err  -> putStrLn $ "ERROR :: " <> err
         Right ast -> do
