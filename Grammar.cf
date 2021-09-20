@@ -1,0 +1,3 @@
+PrimDecl . Declaration ::= "int" Ident ;
+
+ArrayDecl . Declaration ::= "int" "[" Integer "]" Ident ;

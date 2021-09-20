@@ -3,6 +3,16 @@
 This repository contains a program analysis module for the **MicroC** language.
 ## Installation
 
+We depend on BNFC, Alex and Happy:
+
+```shell
+stack install BNFC
+stack install alex
+stack install happy
+```
+
+After you install the dependencies, run:
+
 ```shell
 stack build # build
 stack run   # build and execute the program
