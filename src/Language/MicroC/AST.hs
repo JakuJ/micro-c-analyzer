@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE StandaloneDeriving     #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
@@ -31,6 +32,7 @@ data CType
   = CInt
   -- | The type of Boolean expressions.
   | CBool
+    deriving (Show)
 
 -- | An injective mapping from MicroC types to the Haskell types used to represent their runtime values.
 type family TypeRepr (t :: CType) = q | q -> t where
@@ -48,6 +50,7 @@ data Declaration where
   ArrayDecl :: Int -> Identifier -> Declaration
   -- | Declaration of a record with a given name. We assume the fields are called /fst/ and /snd/.
   RecordDecl :: Identifier -> Declaration
+    deriving (Show)
 
 -- | A type alias for declarations. Leaves room to change the list to a recursive datatype if need be.
 type Declarations = [Declaration]
@@ -60,7 +63,7 @@ data RValue (t :: CType) where
   -- | A reference to an L-value.
   Reference :: LValue t -> RValue t
   -- | A reference to a literal value.
-  Literal :: TypeRepr t -> RValue t
+  Literal :: Show (TypeRepr t) => TypeRepr t -> RValue t
   -- | An application of a binary arithmetic operator.
   OpA :: RValue 'CInt -> OpArith -> RValue 'CInt -> RValue 'CInt
   -- | An application of a relational operator.
@@ -69,6 +72,8 @@ data RValue (t :: CType) where
   OpB :: RValue 'CBool -> OpBool -> RValue 'CBool -> RValue 'CBool
   -- | Boolean negation.
   Not :: RValue 'CBool -> RValue 'CBool
+
+deriving instance Show (RValue t)
 
 -- | An L-value is a value that can only be on the left side of an assignment.
 -- To refer to an 'LValue' on the right side of the 'Assignment', use the 'Reference' constructor.
@@ -80,14 +85,19 @@ data LValue (t :: CType) where
   -- | Used when assigning to a field in a record.
   FieldAccess :: Identifier -> Identifier -> LValue 'CInt
 
+deriving instance Show (LValue (t :: CType))
+
 -- | Arithmetic operators, including bitwise operations.
 data OpArith = Add | Sub | Mult | Div | Mod | BitAnd | BitOr
+  deriving (Show)
 
 -- | Relational operators.
 data OpRel = Lt | Gt | Le | Ge | Eq | Neq
+  deriving (Show)
 
 -- | Boolean operators.
 data OpBool = And | Or
+  deriving (Show)
 
 -- | A statement is a top-level construct that does not evaluate to a value,
 -- but otherwise advances the control flow of a program.
@@ -107,8 +117,11 @@ data Statement where
   -- | A __write__ statement.
   Write :: Show (TypeRepr t) => RValue t -> Statement
 
+deriving instance Show Statement
+
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]
 
 -- | Represents a complete MicroC program consisiting of 'Declarations' and 'Statements'.
 data Program = Program Declarations Statements
+  deriving (Show)

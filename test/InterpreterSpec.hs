@@ -17,7 +17,7 @@ newtype TestEval a = TestEval {unTest :: ReaderT String (Writer String) a}
     deriving (Functor, Applicative, Monad, MonadReader String, MonadWriter String)
 
 instance MonadEval TestEval where
-    evalRead = read <$> ask
+    evalRead = asks read
     evalWrite = tell . show
 
 spec :: Spec

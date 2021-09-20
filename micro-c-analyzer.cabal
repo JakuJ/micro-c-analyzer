@@ -24,6 +24,12 @@ source-repository head
 
 library
   exposed-modules:
+      Grammar.Abs
+      Grammar.ErrM
+      Grammar.Lex
+      Grammar.Par
+      Grammar.Print
+      Grammar.Skel
       Language.MicroC.AST
       Language.MicroC.Interpreter
       Language.MicroC.Parser
@@ -33,7 +39,8 @@ library
       src
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wno-unused-do-bind -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , containers
     , megaparsec
     , mtl
@@ -48,7 +55,8 @@ executable micro-c-analyzer-exe
       app
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wno-unused-do-bind -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , containers
     , megaparsec
     , micro-c-analyzer
@@ -66,7 +74,8 @@ test-suite micro-c-analyzer-test
       test
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wno-unused-do-bind -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , containers
     , hspec
     , megaparsec

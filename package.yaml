@@ -17,6 +17,7 @@ dependencies:
 - megaparsec
 - mtl
 - containers
+- array
 
 ghc-options:
   # optimization

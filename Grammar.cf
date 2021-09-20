@@ -1,3 +1,57 @@
-PrimDecl . Declaration ::= "int" Ident ;
+Program . Program ::= Declarations Statements ;
 
-ArrayDecl . Declaration ::= "int" "[" Integer "]" Ident ;
+PrimDecl . Declaration ::= "int" Ident ";" ;
+ArrayDecl . Declaration ::= "int" "[" Integer "]" Ident ";" ;
+RecordDecl . Declaration ::= "{" "int" "fst" ";" "int" "snd" "}" Ident ";" ;
+
+DeclSeq . Declarations ::= Declaration Declarations ;
+DeclNone . Declarations ::= ;
+
+comment "/*" "*/" ;
+
+Assignment . Statement ::= LValue ":=" Arith ";";
+IfThen . Statement ::= "if" "(" Bool ")" "{" Statements "}";
+IfThenElse . Statement ::= "if" "(" Bool ")" "{" Statements "}" "else" "{" Statements "}";
+While . Statement ::= "while" "(" Bool ")" "{" Statements "}" ;
+Read . Statement ::= "read" LValue ";" ;
+Write . Statement ::= "write" Arith ";" ;
+
+StatSeq . Statements ::= Statement Statements ;
+StatNone . Statements ::= ;
+
+VariableL . LValue ::= Ident ;
+Array . LValue ::= Ident "[" Arith "]" ;
+RecordFst . LValue ::= Ident "." "fst" ;
+RecordSnd . LValue ::= Ident "." "snd" ;
+
+Lit . LitArith ::= Integer;
+LitNeg . LitArith ::= "-" Integer;
+
+Literal . Arith ::= LitArith ;
+VariableR . Arith ::= Ident ;
+ArrayR . Arith ::= Ident "[" Arith "]" ;
+RecordFstR . Arith ::= Ident "." "fst" ;
+RecordSndR . Arith ::= Ident "." "snd" ;
+AppArith . Arith ::= Arith OpA Arith ;
+Parens . Arith ::= "(" Arith ")" ;
+
+True . Bool ::= "true" ;
+False . Bool ::= "false" ;
+AppRel . Bool ::= Arith OpRel Arith ;
+AppBool . Bool ::= Bool OpBool Bool ;
+Not . Bool ::= "not" Bool ;
+
+Plus . OpA ::= "+" ;
+Minus . OpA ::= "-" ;
+Mult . OpA ::= "*" ;
+Div . OpA ::= "/" ;
+
+LT . OpRel ::= "<";
+LTE . OpRel ::= "<=";
+GT . OpRel ::= ">";
+GTE . OpRel ::= ">=";
+EQ . OpRel ::= "==";
+NEQ . OpRel ::= "!=";
+
+And . OpBool ::= "&";
+Or . OpBool ::= "|";
