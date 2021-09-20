@@ -33,6 +33,7 @@ library
       Language.MicroC.AST
       Language.MicroC.Interpreter
       Language.MicroC.Parser
+      Language.MicroC.ProgramGraph
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:
