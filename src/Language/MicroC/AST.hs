@@ -115,7 +115,7 @@ data Statement where
   -- | A __read__ statement.
   Read :: Read (TypeRepr t) => LValue t -> Statement
   -- | A __write__ statement.
-  Write :: Show (TypeRepr t) => RValue t -> Statement
+  Write :: RValue 'CInt -> Statement
 
 deriving instance Show Statement
 
