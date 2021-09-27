@@ -7,8 +7,16 @@ import           Language.MicroC.Interpreter
 import           Language.MicroC.Parser
 import           Language.MicroC.ProgramGraph (Edge, toPG)
 
+data Tree a = Trunk a | Node (Tree a) a (Tree a)
+
+newtype Container = Container {number :: Int}
+
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
+
+-- instance MonadEval IO where
+--   evalRead = liftIO readLn
+--   evalWrite = print
 
 instance MonadEval IOEval where
   evalRead = liftIO readLn
