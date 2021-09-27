@@ -51,6 +51,10 @@ evalStat (Assignment (Variable name) rval) = do
 evalStat (IfThen cond body) = do
     true <- evalR cond
     when true $ evalStats body
+evalStat (IfThenElse cond body els) = do
+    true <- evalR cond
+    if true then evalStats body
+    else evalStats els
 evalStat loop@(While cond body) = do
     true <- evalR cond
     when true $ do

@@ -72,14 +72,18 @@ stmToPG qs qe (AST.IfThen cond body) = do
   let (pos, neg) = branch cond
   rest <- statsToPG q qe body
   return $ [(qs, pos, q), (qs, neg, qe)] ++ rest
+stmToPG qs qe (AST.IfThenElse cond body els) = do
+  qPos <- newState
+  qNeg <- newState
+  let (pos, neg) = branch cond
+  restBody <- statsToPG qPos qe body
+  restEls <- statsToPG qNeg qe els
+  return $ [(qs, pos, qPos), (qs, neg, qNeg)] ++ restBody ++ restEls
 stmToPG qs qe (AST.While cond body) = do
   q <- newState
   let (pos, neg) = branch cond
   rest <- statsToPG q qs body
   return $ [(qs, pos, q), (qs, neg, qe)] ++ rest
-
--- TODO: Implement [if - then - else] and remove this line:
-stmToPG _ _ _ = return []
 
 branch :: AST.RValue 'AST.CBool -> (Action, Action)
 branch v = (BoolAction v, BoolAction (AST.Not v))
