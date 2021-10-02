@@ -61,7 +61,7 @@ type Declarations = [Declaration]
 -- | An R-value is a value that can only be on the right side of an assignment.
 data RValue (t :: CType) where
   -- | A reference to an L-value.
-  Reference :: LValue t -> RValue t
+  Reference :: LValue 'CInt -> RValue 'CInt
   -- | A reference to a literal value.
   Literal :: Show (TypeRepr t) => TypeRepr t -> RValue t
   -- | An application of a binary arithmetic operator.

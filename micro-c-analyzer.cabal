@@ -24,11 +24,19 @@ source-repository head
 
 library
   exposed-modules:
+      Grammar.Abs
+      Grammar.ErrM
+      Grammar.Lex
+      Grammar.Par
+      Grammar.Print
+      Grammar.Skel
       Language.MicroC.Analysis
+      Language.MicroC.Analysis.LiveVariables
       Language.MicroC.AST
       Language.MicroC.Interpreter
       Language.MicroC.Parser
       Language.MicroC.ProgramGraph
+      Language.MicroC.Worklist
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:
