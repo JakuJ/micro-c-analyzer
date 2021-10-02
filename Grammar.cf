@@ -10,9 +10,9 @@ DeclNone . Declarations ::= ;
 comment "/*" "*/" ;
 
 Assignment . Statement ::= LValue ":=" Arith ";";
-IfThen . Statement ::= "if" "(" Bool ")" "{" Statements "}";
-IfThenElse . Statement ::= "if" "(" Bool ")" "{" Statements "}" "else" "{" Statements "}";
-While . Statement ::= "while" "(" Bool ")" "{" Statements "}" ;
+IfThen . Statement ::= "if" "(" Boolean ")" "{" Statements "}";
+IfThenElse . Statement ::= "if" "(" Boolean ")" "{" Statements "}" "else" "{" Statements "}";
+While . Statement ::= "while" "(" Boolean ")" "{" Statements "}" ;
 Read . Statement ::= "read" LValue ";" ;
 Write . Statement ::= "write" Arith ";" ;
 
@@ -35,11 +35,11 @@ RecordSndR . Arith ::= Ident "." "snd" ;
 AppArith . Arith ::= Arith OpA Arith ;
 Parens . Arith ::= "(" Arith ")" ;
 
-True . Bool ::= "true" ;
-False . Bool ::= "false" ;
-AppRel . Bool ::= Arith OpRel Arith ;
-AppBool . Bool ::= Bool OpBool Bool ;
-Not . Bool ::= "not" Bool ;
+True . Boolean ::= "true" ;
+False . Boolean ::= "false" ;
+AppRel . Boolean ::= Arith OpRel Arith ;
+AppBoolean . Boolean ::= Boolean OpBoolean Boolean ;
+Not . Boolean ::= "not" Boolean ;
 
 Plus . OpA ::= "+" ;
 Minus . OpA ::= "-" ;
@@ -53,5 +53,5 @@ GTE . OpRel ::= ">=";
 EQ . OpRel ::= "==";
 NEQ . OpRel ::= "!=";
 
-And . OpBool ::= "&";
-Or . OpBool ::= "|";
+And . OpBoolean ::= "&";
+Or . OpBoolean ::= "|";

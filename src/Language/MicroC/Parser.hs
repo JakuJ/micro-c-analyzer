@@ -49,7 +49,7 @@ tLval (A.RecordFst i) = C.FieldAccess (tIdent i) "fst"
 tLval (A.RecordSnd i) = C.FieldAccess (tIdent i) "snd"
 
 tLit :: A.LitArith -> C.TypeRepr 'C.CInt
-tLit (A.Lit i) = fromInteger i
+tLit (A.Lit i)    = fromInteger i
 tLit (A.LitNeg i) = fromInteger (- i)
 
 tArith :: A.Arith -> C.RValue 'C.CInt
@@ -68,12 +68,12 @@ tOpA = \case
     A.Mult -> C.Mult
     A.Div -> C.Div
 
-tBool :: A.Bool -> C.RValue 'C.CBool
-tBool A.True = C.Literal True
-tBool A.False = C.Literal False
-tBool (A.AppRel a op b) = C.OpR (tArith a) (tOpR op) (tArith b)
-tBool (A.AppBool a op b) = C.OpB (tBool a) (tOpB op) (tBool b)
-tBool (A.Not b) = C.Not (tBool b)
+tBool :: A.Boolean -> C.RValue 'C.CBool
+tBool A.True                = C.Literal True
+tBool A.False               = C.Literal False
+tBool (A.AppRel a op b)     = C.OpR (tArith a) (tOpR op) (tArith b)
+tBool (A.AppBoolean a op b) = C.OpB (tBool a) (tOpB op) (tBool b)
+tBool (A.Not b)             = C.Not (tBool b)
 
 tOpR :: A.OpRel -> C.OpRel
 tOpR = \case
@@ -84,7 +84,7 @@ tOpR = \case
     A.EQ -> C.Eq
     A.NEQ -> C.Neq
 
-tOpB :: A.OpBool -> C.OpBool
+tOpB :: A.OpBoolean -> C.OpBool
 tOpB = \case
     A.And -> C.And
     A.Or -> C.Or

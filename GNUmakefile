@@ -5,6 +5,7 @@ HAPPY      = happy
 HAPPY_OPTS = --array --info --ghc --coerce
 ALEX       = alex
 ALEX_OPTS  = --ghc
+DIR		   = src/Grammar
 
 # List of goals not corresponding to file names.
 
@@ -12,13 +13,13 @@ ALEX_OPTS  = --ghc
 
 # Default goal.
 
-all : Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs
-	move Grammar src\Grammar
+all : ${DIR}/Abs.hs ${DIR}/Lex.x ${DIR}/Par.y ${DIR}/Print.hs
+	-rm ${DIR}/Test.hs
 
 # Rules for building the parser.
 
-Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
-	bnfc --haskell -d Grammar.cf
+${DIR}/Abs.hs ${DIR}/Lex.x ${DIR}/Par.y ${DIR}/Print.hs : Grammar.cf
+	bnfc --haskell -d Grammar.cf -o src
 
 %.hs : %.y
 	${HAPPY} ${HAPPY_OPTS} $<
@@ -26,12 +27,7 @@ Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
 %.hs : %.x
 	${ALEX} ${ALEX_OPTS} $<
 
-Grammar/Test : Grammar/Abs.hs Grammar/Lex.hs Grammar/Par.hs Grammar/Print.hs
-	${GHC} ${GHC_OPTS} $@ && del Grammar/Test.hs
-
 # Rules for cleaning generated files.
 
 clean :
-	-del -f Grammar/*.hi Grammar/*.o Grammar/*.log Grammar/*.aux Grammar/*.dvi
-
-# EOF
+	-rm -r ${DIR}

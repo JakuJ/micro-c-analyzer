@@ -103,9 +103,9 @@ data OpBool = And | Or
 -- but otherwise advances the control flow of a program.
 data Statement where
   -- | An assignment of an R-value to an L-value.
-  Assignment :: LValue t -> RValue t -> Statement
+  Assignment :: LValue 'CInt -> RValue 'CInt -> Statement
   -- | An assignment of two R-values to consecuive fields in a record.
-  RecordAssignment :: Identifier -> RValue t1 -> RValue t2 -> Statement
+  RecordAssignment :: Identifier -> RValue 'CInt -> RValue 'CInt -> Statement
   -- | An __if-then__ statement without the __else__ clause.
   IfThen :: RValue 'CBool -> Statements -> Statement
   -- | An __if-then-else__ statement.
@@ -113,9 +113,9 @@ data Statement where
   -- | A __while__ statement.
   While :: RValue 'CBool -> Statements -> Statement
   -- | A __read__ statement.
-  Read :: Read (TypeRepr t) => LValue t -> Statement
+  Read :: LValue 'CInt -> Statement
   -- | A __write__ statement.
-  Write :: Show (TypeRepr t) => RValue t -> Statement
+  Write :: RValue 'CInt -> Statement
 
 deriving instance Show Statement
 
