@@ -5,6 +5,8 @@
 module Language.MicroC.ProgramGraph
 ( toPG
 , Edge
+, PG
+, StateNum
 ) where
 
 import qualified Control.Monad.State.Lazy as S

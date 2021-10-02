@@ -24,12 +24,7 @@ source-repository head
 
 library
   exposed-modules:
-      Grammar.Abs
-      Grammar.ErrM
-      Grammar.Lex
-      Grammar.Par
-      Grammar.Print
-      Grammar.Skel
+      Language.MicroC.Analysis
       Language.MicroC.AST
       Language.MicroC.Interpreter
       Language.MicroC.Parser
