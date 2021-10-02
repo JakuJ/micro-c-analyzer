@@ -9,8 +9,8 @@ module Language.MicroC.Analysis.LiveVariables
 
 import qualified Data.Set                     as S
 import           Language.MicroC.Analysis
-import           Language.MicroC.AST          (Identifier)
-import qualified Language.MicroC.AST          as AST
+import           Language.MicroC.AST hiding ( Variable )
+import qualified Language.MicroC.AST as AST
 import           Language.MicroC.ProgramGraph
 
 -- | A result of a Live Variables analysis.
@@ -33,4 +33,21 @@ instance Analysis LV where
   stateOrder = backward
   -- TODO: Kill and gen functions
   kill _ = S.empty
-  gen _ = S.empty
+  gen (_, DeclAction _, _) = S.empty 
+  gen (_, AssignAction _ r, _) = fv r
+  gen (_, ReadAction _, _) = S.empty 
+  gen (_, WriteAction r, _) = fv r
+  gen (_, BoolAction r, _) = fv r
+
+fv :: RValue a -> S.Set LVResult
+fv (Reference l) = fv' l
+fv (OpA x _ y) = fv x `S.union` fv y
+fv (OpR x _ y) = fv x `S.union` fv y
+fv (OpB x _ y) = fv x `S.union` fv y
+fv (Not r) = fv r
+fv _ = S.empty
+
+fv' :: LValue a -> S.Set LVResult
+fv' (AST.Variable i) = S.singleton (Variable i)
+fv' (ArrayIndex i r) = S.singleton (Array i) `S.union` fv r
+fv' (FieldAccess i i') = S.singleton (RecordField i i')
