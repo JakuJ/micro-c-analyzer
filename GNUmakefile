@@ -5,6 +5,7 @@ HAPPY      = happy
 HAPPY_OPTS = --array --info --ghc --coerce
 ALEX       = alex
 ALEX_OPTS  = --ghc
+DIR		   = src/Grammar
 
 # List of goals not corresponding to file names.
 
@@ -12,12 +13,13 @@ ALEX_OPTS  = --ghc
 
 # Default goal.
 
-all : Grammar/Test
+all : ${DIR}/Abs.hs ${DIR}/Lex.x ${DIR}/Par.y ${DIR}/Print.hs
+	-rm ${DIR}/Test.hs
 
 # Rules for building the parser.
 
-Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
-	bnfc --haskell -d Grammar.cf
+${DIR}/Abs.hs ${DIR}/Lex.x ${DIR}/Par.y ${DIR}/Print.hs : Grammar.cf
+	bnfc --haskell -d Grammar.cf -o src
 
 %.hs : %.y
 	${HAPPY} ${HAPPY_OPTS} $<
@@ -25,16 +27,7 @@ Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
 %.hs : %.x
 	${ALEX} ${ALEX_OPTS} $<
 
-Grammar/Test : Grammar/Abs.hs Grammar/Lex.hs Grammar/Par.hs Grammar/Print.hs
-	${GHC} ${GHC_OPTS} $@ && rm Grammar/Test.hs
-
 # Rules for cleaning generated files.
 
 clean :
-	-rm -f Grammar/*.hi Grammar/*.o Grammar/*.log Grammar/*.aux Grammar/*.dvi
-
-distclean : clean
-	-rm -f Grammar/Abs.hs Grammar/Abs.hs.bak Grammar/ComposOp.hs Grammar/ComposOp.hs.bak Grammar/Doc.txt Grammar/Doc.txt.bak Grammar/ErrM.hs Grammar/ErrM.hs.bak Grammar/Layout.hs Grammar/Layout.hs.bak Grammar/Lex.x Grammar/Lex.x.bak Grammar/Par.y Grammar/Par.y.bak Grammar/Print.hs Grammar/Print.hs.bak Grammar/Skel.hs Grammar/Skel.hs.bak Grammar/Test.hs Grammar/Test.hs.bak Grammar/XML.hs Grammar/XML.hs.bak Grammar/AST.agda Grammar/AST.agda.bak Grammar/Parser.agda Grammar/Parser.agda.bak Grammar/IOLib.agda Grammar/IOLib.agda.bak Grammar/Main.agda Grammar/Main.agda.bak Grammar/Grammar.dtd Grammar/Grammar.dtd.bak Grammar/Test Grammar/Lex.hs Grammar/Par.hs Grammar/Par.info Grammar/ParData.hs Makefile
-	-rmdir -p Grammar/
-
-# EOF
+	-rm -r ${DIR}

@@ -1,6 +1,7 @@
 # micro-c-analyzer
 
 This repository contains a program analysis module for the **MicroC** language.
+
 ## Installation
 
 We depend on BNFC, Alex and Happy:
