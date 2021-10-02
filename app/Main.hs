@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeApplications           #-}
 
 module Main (main) where
 
@@ -7,7 +8,7 @@ import           Control.Monad.IO.Class                 (MonadIO (..))
 import           Data.Foldable                          (toList)
 import qualified Data.Map                               as M
 import           Language.MicroC.Analysis               (Analysis (gen, kill))
-import           Language.MicroC.Analysis.LiveVariables (runLV)
+import           Language.MicroC.Analysis.LiveVariables (LV)
 import           Language.MicroC.Interpreter            (MonadEval (..))
 import           Language.MicroC.Parser                 (parseProgram)
 import           Language.MicroC.ProgramGraph           (Edge, toPG)
@@ -27,15 +28,15 @@ main = do
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do
       let pg = toPG ast
-          solution = runLV $ roundRobin pg (-1)
+          solution = roundRobin @LV pg (-1)
       putStrLn "AST:" >> print ast
       putStrLn "PG:"
       forM_ pg $ \e -> do
         putStrLn $ printEdge e
         putStr "KILL: "
-        print . toList . runLV . kill $ e
+        print . toList . kill @LV $ e
         putStr "GEN: "
-        print . toList . runLV . gen $ e
+        print . toList . gen @LV $ e
         putStrLn ""
       putStrLn "SOLUTION: "
       forM_ (M.toList solution) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show (toList lv)

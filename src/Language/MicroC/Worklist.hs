@@ -18,47 +18,40 @@ import           Language.MicroC.ProgramGraph (PG, StateNum)
 type Solution m = M.Map StateNum (S.Set (Result m))
 
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
-type WorklistAlgorithm m = Analysis m => PG -> StateNum -> m (Solution m)
+type WorklistAlgorithm m = Analysis m => PG -> StateNum -> Solution m
 
 -- | An implementation of the Round Robin worklist algorithm.
-roundRobin :: forall m. WorklistAlgorithm m
-roundRobin pg s0 = execStateT go M.empty
+roundRobin :: forall m . WorklistAlgorithm m
+roundRobin pg s0 = execState go M.empty
   where
-    go :: StateT (Solution m) m ()
+    go :: State (Solution m) ()
     go = do
       -- all states except the first one
       let qq = states pg S.\\ S.singleton s0
 
-      -- evaluate the bottom and initial values
-      bottom <- lift $ bottomValue @m
-      initial <- lift $ initialValue @m
-
       -- set bottom value to all states
-      forM_ qq $ \s -> modify (M.insert s bottom)
+      forM_ qq $ \s -> modify (M.insert s bottomValue)
 
       -- set initial value to state s0
-      modify (M.insert s0 initial)
+      modify (M.insert s0 initialValue)
 
       -- iterate until False is returned for every element
       whileM $ anyM pg $ \e -> do
         -- get order of states (reversed for backward problems)
-        (q, q') <- lift $ stateOrder e
+        let (q, q') = stateOrder @m e
         -- get current solution for q and q'
         aq <- gets (M.! q)
         aq' <- gets (M.! q')
-        -- calculate kill and gen sets for this edge
-        killed <- lift $ kill e
-        generated <- lift $ gen e
-        -- calculate left side of the constraint : (A(q) - kill) + gen
-        let leftSide = (aq S.\\ killed) `S.union` generated
-        -- constraint is satisifed if [left side] `constraint` [right side] is True
-        satisfied <- lift $ constraint leftSide aq'
+        -- calculate left side of the constraint
+        let leftSide = (aq S.\\ kill e) `S.union` gen e
+            satisfied = constraint leftSide aq'
         if not satisfied then do
           -- if not satisfied, we set update the solution for state q'
           modify $ M.insert q' (S.union aq' leftSide)
           -- and indicate something has changed
           pure True
-        else pure False
+        else
+          pure False
 
 -- HELPER FUNCTIONS
 
