@@ -31,8 +31,19 @@ instance Analysis LV where
   bottomValue = S.empty
   initialValue = S.empty
   stateOrder = backward
-  -- TODO: Kill and gen functions
-  kill _ = S.empty
+  kill (_, action, _) = case action of
+    DeclAction (VariableDecl x)             -> S.singleton (Variable x)
+    DeclAction (RecordDecl x)               -> S.fromList [RecordField x "fst", RecordField x "snd"]
+    DeclAction (ArrayDecl _ a)              -> S.singleton (Array a)
+    AssignAction (AST.Variable x) _         -> S.singleton (Variable x)
+    AssignAction (AST.ArrayIndex _ _) _     -> S.empty
+    AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i')
+    ReadAction (AST.Variable x)             -> S.singleton (Variable x)
+    ReadAction (AST.ArrayIndex _ _)         -> S.empty
+    ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i')
+    WriteAction _                           -> S.empty
+    BoolAction _                            -> S.empty
+
   gen (_, action, _) = case action of
     DeclAction _       -> S.empty
     AssignAction lv rv -> fv'' lv `S.union` fv rv
