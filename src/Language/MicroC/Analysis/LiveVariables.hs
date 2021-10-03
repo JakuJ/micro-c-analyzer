@@ -31,6 +31,7 @@ instance Analysis LV where
   bottomValue = S.empty
   initialValue = S.empty
   stateOrder = backward
+  -- Missing double-record assignment R := (a,b)
   kill (_, action, _) = case action of
     DeclAction (VariableDecl x)             -> S.singleton (Variable x)
     DeclAction (RecordDecl x)               -> S.fromList [RecordField x "fst", RecordField x "snd"]
