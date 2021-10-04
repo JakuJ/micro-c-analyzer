@@ -8,6 +8,7 @@ import           Control.Monad.IO.Class                 (MonadIO (..))
 import           Data.Foldable                          (toList)
 import qualified Data.Map                               as M
 import           Language.MicroC.Analysis.LiveVariables (LV, kill, gen)
+import           Language.MicroC.Analysis.FaintVariables(FV)
 import           Language.MicroC.Interpreter            (MonadEval (..),
                                                          evalProgram)
 import           Language.MicroC.Parser                 (parseProgram)
@@ -28,16 +29,16 @@ main = do
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do
       let pg = toPG ast
-          solution = roundRobin @LV pg (-1)
+          solution = roundRobin @FV pg (-1)
       putStrLn "AST:" >> print ast
       putStrLn "PG:"
       forM_ pg $ \e -> do
         putStrLn $ printEdge e
-        putStr "KILL: "
-        print . toList . kill $ e
-        putStr "GEN: "
-        print . toList . gen $ e
-        putStrLn ""
+        -- putStr "KILL: "
+        -- print . toList . kill $ e
+        -- putStr "GEN: "
+        -- print . toList . gen $ e
+        -- putStrLn ""
       putStrLn "SOLUTION: "
       forM_ (M.toList solution) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show (toList lv)
       putStrLn "Interpreter:"

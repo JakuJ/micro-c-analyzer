@@ -6,11 +6,13 @@
 
 module Language.MicroC.Analysis
 ( Analysis(..)
+, ID(..)
 , forward
 , backward
 ) where
 
 import           Data.Set                     (Set, isSubsetOf)
+import           Language.MicroC.AST          (Identifier)
 import           Language.MicroC.ProgramGraph (Edge, StateNum)
 
 -- | An abstract analysis monad.
@@ -40,3 +42,12 @@ forward (qs, _, qe) = (qs, qe)
 -- ^ Edge state order for forward analyses.
 backward (qs, _, qe) = (qe, qs)
 -- ^ Edge state order for backward analyses.
+
+data ID
+  = Variable Identifier
+  -- ^ Name of a variable.
+  | Array Identifier
+  -- ^ Name of an array, we amalgamate those.
+  | RecordField Identifier Identifier
+  -- ^ Name of a record and its field.
+    deriving (Eq, Ord, Show)
