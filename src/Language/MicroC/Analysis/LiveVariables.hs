@@ -8,9 +8,9 @@ module Language.MicroC.Analysis.LiveVariables
 ) where
 
 import qualified Data.Set                     as S
+import           Language.MicroC.Analysis
 import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
-import           Language.MicroC.Analysis
 import           Language.MicroC.ProgramGraph
 
 -- | A result of a Live Variables analysis.
@@ -37,20 +37,16 @@ instance Analysis LV where
     DeclAction (RecordDecl x)               -> S.fromList [RecordField x "fst", RecordField x "snd"]
     DeclAction (ArrayDecl _ a)              -> S.singleton (Array a)
     AssignAction (AST.Variable x) _         -> S.singleton (Variable x)
-    AssignAction (AST.ArrayIndex _ _) _     -> S.empty
     AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i')
     ReadAction (AST.Variable x)             -> S.singleton (Variable x)
-    ReadAction (AST.ArrayIndex _ _)         -> S.empty
     ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i')
-    WriteAction _                           -> S.empty
-    BoolAction _                            -> S.empty
+    _                                       -> S.empty
 
   gen (_, action, _) = case action of
-    DeclAction _       -> S.empty
     AssignAction lv rv -> fv'' lv `S.union` fv rv
-    ReadAction _       -> S.empty
     WriteAction rv     -> fv rv
     BoolAction rv      -> fv rv
+    _                  -> S.empty
 
 fv :: RValue a -> S.Set LVResult
 fv (Reference lv)  = fv' lv
