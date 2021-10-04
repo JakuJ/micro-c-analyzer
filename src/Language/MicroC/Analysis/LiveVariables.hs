@@ -5,6 +5,8 @@
 module Language.MicroC.Analysis.LiveVariables
 ( LV
 , LVResult(..)
+, kill
+, gen
 ) where
 
 import qualified Data.Set                     as S
@@ -31,22 +33,25 @@ instance Analysis LV where
   bottomValue = S.empty
   initialValue = S.empty
   stateOrder = backward
-  -- Missing double-record assignment R := (a,b)
-  kill (_, action, _) = case action of
-    DeclAction (VariableDecl i)             -> S.singleton $ Variable i
-    DeclAction (RecordDecl i)               -> S.fromList [RecordField i "fst", RecordField i "snd"]
-    DeclAction (ArrayDecl _ i)              -> S.singleton $ Array i
-    AssignAction (AST.Variable i) _         -> S.singleton $ Variable i
-    AssignAction (AST.FieldAccess i i') _   -> S.singleton $ RecordField i i'
-    ReadAction (AST.Variable i)             -> S.singleton $ Variable i
-    ReadAction (AST.FieldAccess i i')       -> S.singleton $ RecordField i i'
-    _                                       -> S.empty
+  analyze e s = (s S.\\ kill e) `S.union` gen e
 
-  gen (_, action, _) = case action of
-    AssignAction lv rv -> fv'' lv `S.union` fv rv
-    WriteAction rv     -> fv rv
-    BoolAction rv      -> fv rv
-    _                  -> S.empty
+kill :: (a, Action, c) -> S.Set LVResult
+kill (_, action, _) = case action of
+  DeclAction (VariableDecl i)             -> S.singleton $ Variable i
+  DeclAction (RecordDecl i)               -> S.fromList [RecordField i "fst", RecordField i "snd"]
+  DeclAction (ArrayDecl _ i)              -> S.singleton $ Array i
+  AssignAction (AST.Variable i) _         -> S.singleton $ Variable i
+  AssignAction (AST.FieldAccess i i') _   -> S.singleton $ RecordField i i'
+  ReadAction (AST.Variable i)             -> S.singleton $ Variable i
+  ReadAction (AST.FieldAccess i i')       -> S.singleton $ RecordField i i'
+  _                                       -> S.empty
+
+gen :: (a, Action, c) -> S.Set LVResult
+gen (_, action, _) = case action of
+  AssignAction lv rv -> fv'' lv `S.union` fv rv
+  WriteAction rv     -> fv rv
+  BoolAction rv      -> fv rv
+  _                  -> S.empty
 
 fv :: RValue a -> S.Set LVResult
 fv (Reference lv)  = fv' lv
