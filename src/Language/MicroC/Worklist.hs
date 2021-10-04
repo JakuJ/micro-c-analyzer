@@ -43,7 +43,7 @@ roundRobin pg s0 = execState go M.empty
         aq <- gets (M.! q)
         aq' <- gets (M.! q')
         -- calculate left side of the constraint
-        let leftSide = (aq S.\\ kill e) `S.union` gen e
+        let leftSide = analyze e aq
             satisfied = constraint leftSide aq'
         if not satisfied then do
           -- if not satisfied, we set update the solution for state q'

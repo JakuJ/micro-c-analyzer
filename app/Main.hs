@@ -7,8 +7,7 @@ import           Control.Monad                          (forM_)
 import           Control.Monad.IO.Class                 (MonadIO (..))
 import           Data.Foldable                          (toList)
 import qualified Data.Map                               as M
-import           Language.MicroC.Analysis               (Analysis (gen, kill))
-import           Language.MicroC.Analysis.LiveVariables (LV)
+import           Language.MicroC.Analysis.LiveVariables (LV, kill, gen)
 import           Language.MicroC.Interpreter            (MonadEval (..),
                                                          evalProgram)
 import           Language.MicroC.Parser                 (parseProgram)
@@ -35,9 +34,9 @@ main = do
       forM_ pg $ \e -> do
         putStrLn $ printEdge e
         putStr "KILL: "
-        print . toList . kill @LV $ e
+        print . toList . kill $ e
         putStr "GEN: "
-        print . toList . gen @LV $ e
+        print . toList . gen $ e
         putStrLn ""
       putStrLn "SOLUTION: "
       forM_ (M.toList solution) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show (toList lv)
