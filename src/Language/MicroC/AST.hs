@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE StandaloneDeriving     #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
 module Language.MicroC.AST
@@ -74,6 +75,8 @@ data RValue (t :: CType) where
   Not :: RValue 'CBool -> RValue 'CBool
 
 deriving instance Show (RValue t)
+deriving instance Eq (TypeRepr t) => Eq (RValue t)
+deriving instance Ord (TypeRepr t) => Ord (RValue t)
 
 -- | An L-value is a value that can only be on the left side of an assignment.
 -- To refer to an 'LValue' on the right side of the 'Assignment', use the 'Reference' constructor.
@@ -86,18 +89,20 @@ data LValue (t :: CType) where
   FieldAccess :: Identifier -> Identifier -> LValue 'CInt
 
 deriving instance Show (LValue (t :: CType))
+deriving instance Eq (LValue t)
+deriving instance Ord (LValue t)
 
 -- | Arithmetic operators, including bitwise operations.
 data OpArith = Add | Sub | Mult | Div | Mod | BitAnd | BitOr
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 -- | Relational operators.
 data OpRel = Lt | Gt | Le | Ge | Eq | Neq
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 -- | Boolean operators.
 data OpBool = And | Or
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 -- | A statement is a top-level construct that does not evaluate to a value,
 -- but otherwise advances the control flow of a program.
@@ -118,6 +123,8 @@ data Statement where
   Write :: RValue 'CInt -> Statement
 
 deriving instance Show Statement
+deriving instance Eq Statement
+deriving instance Ord Statement
 
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]

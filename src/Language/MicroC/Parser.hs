@@ -23,15 +23,16 @@ tIdent (A.Ident i) = i
 
 tStats :: A.Statements -> C.Statements
 tStats A.StatNone       = []
-tStats (A.StatSeq s ss) = tStat s : tStats ss
+tStats (A.StatSeq s ss) = tStat s <> tStats ss
 
-tStat :: A.Statement -> C.Statement
-tStat (A.Assignment l a)     = C.Assignment (tLval l) (tArith a)
-tStat (A.IfThen c b)         = C.IfThen (tBool c) (tStats b)
-tStat (A.IfThenElse c b1 b2) = C.IfThenElse (tBool c) (tStats b1) (tStats b2)
-tStat (A.While c b)          = C.While (tBool c) (tStats b)
-tStat (A.Read l)             = C.Read (tLval l)
-tStat (A.Write a)            = C.Write (tArith a)
+tStat :: A.Statement -> [C.Statement]
+tStat (A.Assignment l a)           = pure $ C.Assignment (tLval l) (tArith a)
+tStat (A.RecordAssignment r f1 f2) = [C.Assignment (C.FieldAccess (tIdent r) "fst") (tArith f1), C.Assignment (C.FieldAccess (tIdent r) "snd") (tArith f2)]
+tStat (A.IfThen c b)               = pure $ C.IfThen (tBool c) (tStats b)
+tStat (A.IfThenElse c b1 b2)       = pure $ C.IfThenElse (tBool c) (tStats b1) (tStats b2)
+tStat (A.While c b)                = pure $ C.While (tBool c) (tStats b)
+tStat (A.Read l)                   = pure $ C.Read (tLval l)
+tStat (A.Write a)                  = pure $ C.Write (tArith a)
 
 tDecls :: A.Declarations -> C.Declarations
 tDecls A.DeclNone       = []

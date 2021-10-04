@@ -10,6 +10,7 @@ DeclNone . Declarations ::= ;
 comment "/*" "*/" ;
 
 Assignment . Statement ::= LValue ":=" Arith ";";
+RecordAssignment . Statement ::= Ident ":=" "(" Arith "," Arith ")" ";";
 IfThen . Statement ::= "if" "(" Boolean ")" "{" Statements "}";
 IfThenElse . Statement ::= "if" "(" Boolean ")" "{" Statements "}" "else" "{" Statements "}";
 While . Statement ::= "while" "(" Boolean ")" "{" Statements "}" ;
