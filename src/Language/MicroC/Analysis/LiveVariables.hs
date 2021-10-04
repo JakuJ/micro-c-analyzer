@@ -33,13 +33,13 @@ instance Analysis LV where
   stateOrder = backward
   -- Missing double-record assignment R := (a,b)
   kill (_, action, _) = case action of
-    DeclAction (VariableDecl x)             -> S.singleton (Variable x)
-    DeclAction (RecordDecl x)               -> S.fromList [RecordField x "fst", RecordField x "snd"]
-    DeclAction (ArrayDecl _ a)              -> S.singleton (Array a)
-    AssignAction (AST.Variable x) _         -> S.singleton (Variable x)
-    AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i')
-    ReadAction (AST.Variable x)             -> S.singleton (Variable x)
-    ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i')
+    DeclAction (VariableDecl i)             -> S.singleton $ Variable i
+    DeclAction (RecordDecl i)               -> S.fromList [RecordField i "fst", RecordField i "snd"]
+    DeclAction (ArrayDecl _ i)              -> S.singleton $ Array i
+    AssignAction (AST.Variable i) _         -> S.singleton $ Variable i
+    AssignAction (AST.FieldAccess i i') _   -> S.singleton $ RecordField i i'
+    ReadAction (AST.Variable i)             -> S.singleton $ Variable i
+    ReadAction (AST.FieldAccess i i')       -> S.singleton $ RecordField i i'
     _                                       -> S.empty
 
   gen (_, action, _) = case action of
@@ -57,9 +57,9 @@ fv (Not rv)        = fv rv
 fv _               = S.empty
 
 fv' :: LValue a -> S.Set LVResult
-fv' (AST.Variable i)   = S.singleton (Variable i)
+fv' (AST.Variable i)   = S.singleton $ Variable i
 fv' (ArrayIndex i rv)  = S.singleton (Array i) `S.union` fv rv
-fv' (FieldAccess i i') = S.singleton (RecordField i i')
+fv' (FieldAccess i i') = S.singleton $ RecordField i i'
 
 fv'' :: LValue a -> S.Set LVResult
 fv'' (ArrayIndex i rv) = S.singleton (Array i) `S.union` fv rv
