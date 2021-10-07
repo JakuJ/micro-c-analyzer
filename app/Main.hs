@@ -3,17 +3,17 @@
 
 module Main (main) where
 
-import           Control.Monad                          (forM_)
-import           Control.Monad.IO.Class                 (MonadIO (..))
-import           Data.Foldable                          (toList)
-import qualified Data.Map                               as M
-import           Language.MicroC.Analysis.LiveVariables (LV, kill, gen)
-import           Language.MicroC.Analysis.FaintVariables(FV)
-import           Language.MicroC.Interpreter            (MonadEval (..),
-                                                         evalProgram)
-import           Language.MicroC.Parser                 (parseProgram)
-import           Language.MicroC.ProgramGraph           (Edge, toPG)
-import           Language.MicroC.Worklist               (roundRobin)
+import           Control.Monad                           (forM_)
+import           Control.Monad.IO.Class                  (MonadIO (..))
+import           Data.Foldable                           (toList)
+import qualified Data.Map                                as M
+import           Language.MicroC.Analysis.FaintVariables (FV)
+-- import           Language.MicroC.Analysis.LiveVariables  (LV, gen, kill)
+import           Language.MicroC.Interpreter             (MonadEval (..),
+                                                          evalProgram)
+import           Language.MicroC.Parser                  (parseProgram)
+import           Language.MicroC.ProgramGraph            (Edge, toPG)
+import           Language.MicroC.Worklist                (roundRobin)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -24,7 +24,7 @@ instance MonadEval IOEval where
 
 main :: IO ()
 main = do
-  prog <- parseProgram "sources/even.c"
+  prog <- parseProgram "sources/records.c"
   case prog of
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do

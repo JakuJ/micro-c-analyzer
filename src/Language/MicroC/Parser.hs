@@ -16,40 +16,34 @@ parseProgram path = do
     return $ tProgram <$> pProgram lexemes
 
 tProgram :: A.Program -> C.Program
-tProgram (A.Program decls stats) = C.Program (tDecls decls) (tStats stats)
+tProgram (A.Program decls stats) = C.Program (map tDecl decls) (concatMap tStat stats)
 
 tIdent :: A.Ident -> C.Identifier
 tIdent (A.Ident i) = i
 
-tStats :: A.Statements -> C.Statements
-tStats A.StatNone       = []
-tStats (A.StatSeq s ss) = tStat s <> tStats ss
-
 tStat :: A.Statement -> [C.Statement]
 tStat (A.Assignment l a)           = pure $ C.Assignment (tLval l) (tArith a)
-tStat (A.RecordOrVariable i s)     = case s of
-                                   A.Variable a   -> pure $ C.Assignment (C.Variable (tIdent i)) (tArith a)
-                                   A.Record f1 f2 -> [C.Assignment (C.FieldAccess (tIdent i) "fst") (tArith f1), C.Assignment (C.FieldAccess (tIdent i) "snd") (tArith f2)]
-tStat (A.IfThen c b)               = pure $ C.IfThen (tBool c) (tStats b)
-tStat (A.IfThenElse c b1 b2)       = pure $ C.IfThenElse (tBool c) (tStats b1) (tStats b2)
-tStat (A.While c b)                = pure $ C.While (tBool c) (tStats b)
+tStat (A.RecordOrVariable i s)     = pure $ case s of
+                                              A.Variable a   -> C.Assignment (C.Variable (tIdent i)) (tArith a)
+                                              A.Record vals -> C.RecordAssignment (tIdent i) (map tArith vals)
+tStat (A.IfThen c b)               = pure $ C.IfThen (tBool c) (concatMap tStat b)
+tStat (A.IfThenElse c b1 b2)       = pure $ C.IfThenElse (tBool c) (concatMap tStat b1) (concatMap tStat b2)
+tStat (A.While c b)                = pure $ C.While (tBool c) (concatMap tStat b)
 tStat (A.ReadL l)                  = pure $ C.Read (tLval l)
 tStat (A.ReadI i)                  = pure $ C.Read (C.Variable (tIdent i))
 tStat (A.Write a)                  = pure $ C.Write (tArith a)
 
-tDecls :: A.Declarations -> C.Declarations
-tDecls A.DeclNone       = []
-tDecls (A.DeclSeq d dd) = tDecl d : tDecls dd
+tField :: A.Field -> C.Identifier
+tField (A.Field n) = tIdent n
 
 tDecl :: A.Declaration -> C.Declaration
-tDecl (A.PrimDecl i)     = C.VariableDecl (tIdent i)
-tDecl (A.ArrayDecl ix i) = C.ArrayDecl (fromInteger ix) (tIdent i)
-tDecl (A.RecordDecl i)   = C.RecordDecl (tIdent i)
+tDecl (A.PrimDecl i)      = C.VariableDecl (tIdent i)
+tDecl (A.ArrayDecl ix i)  = C.ArrayDecl (fromInteger ix) (tIdent i)
+tDecl (A.RecordDecl ns i) = C.RecordDecl (tIdent i) (map tField ns)
 
 tLval :: A.LValue -> C.LValue 'C.CInt
-tLval (A.Array i ix)  = C.ArrayIndex (tIdent i) (tArith ix)
-tLval (A.RecordFst i) = C.FieldAccess (tIdent i) "fst"
-tLval (A.RecordSnd i) = C.FieldAccess (tIdent i) "snd"
+tLval (A.Array i ix)      = C.ArrayIndex (tIdent i) (tArith ix)
+tLval (A.RecordField i f) = C.FieldAccess (tIdent i) (tIdent f)
 
 tLit :: A.LitArith -> C.TypeRepr 'C.CInt
 tLit (A.Lit i)    = fromInteger i
@@ -57,10 +51,7 @@ tLit (A.LitNeg i) = fromInteger (- i)
 
 tArith :: A.Arith -> C.RValue 'C.CInt
 tArith (A.Literal la)      = C.Literal (tLit la)
-tArith (A.VariableR i)     = C.Reference (C.Variable (tIdent i))
-tArith (A.ArrayR i ix)     = C.Reference (C.ArrayIndex (tIdent i) (tArith ix))
-tArith (A.RecordFstR i)    = C.Reference (C.FieldAccess (tIdent i) "fst")
-tArith (A.RecordSndR i)    = C.Reference (C.FieldAccess (tIdent i) "snd")
+tArith (A.VariableR lv)    = C.Reference (tLval lv)
 tArith (A.AppArith a op b) = C.OpA (tArith a) (tOpA op) (tArith b)
 tArith (A.Parens expr)     = tArith expr
 

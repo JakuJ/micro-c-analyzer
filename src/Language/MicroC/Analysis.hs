@@ -50,4 +50,9 @@ data ID
   -- ^ Name of an array, we amalgamate those.
   | RecordField Identifier Identifier
   -- ^ Name of a record and its field.
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
+
+instance Show ID where
+  show (Variable i)      = i
+  show (Array i)         = i
+  show (RecordField r f) = r <> "." <> f

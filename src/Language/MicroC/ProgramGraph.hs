@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.MicroC.ProgramGraph
@@ -10,7 +11,10 @@ module Language.MicroC.ProgramGraph
 , Action(..)
 ) where
 
+import           Control.Lens             (makeLenses, uses, (%=), (<<+=))
+import           Control.Monad            (replicateM)
 import qualified Control.Monad.State.Lazy as S
+import qualified Data.Map.Lazy            as M
 import qualified Language.MicroC.AST      as AST
 
 -- | Different states are represented using integers.
@@ -31,17 +35,25 @@ type Edge = (StateNum, Action, StateNum)
 -- | A program graph is a list of edges.
 type PG = [Edge]
 
+data Memory = Memory
+  { _nextInt :: Int
+  , _fields  :: M.Map AST.Identifier [AST.Identifier]
+  }
+
+makeLenses ''Memory
+
 class Monad m => MonadNode m where
   newState :: m StateNum
+  setFields :: AST.Identifier -> [AST.Identifier] -> m ()
+  getFields :: AST.Identifier -> m [AST.Identifier]
 
-instance MonadNode (S.State Int) where
-  newState = do
-    c <- S.get
-    S.modify (+1)
-    return c
+instance MonadNode (S.State Memory) where
+  newState = nextInt <<+= 1
+  getFields r = uses fields (M.! r)
+  setFields r fs = fields %= M.insert r fs
 
 toPG :: AST.Program -> PG
-toPG p = S.evalState (toPG' 0 (-1) p) (1 :: Int)
+toPG p = S.evalState (toPG' 0 (-1) p) (Memory 1 M.empty)
 
 toPG' :: MonadNode m => StateNum -> StateNum ->  AST.Program -> m PG
 toPG' qs qe (AST.Program ds ss) = do
@@ -60,7 +72,11 @@ decsToPG qs qe (d : ds) = do
   (:) <$> decToPG qs q d <*> decsToPG q qe ds
 
 decToPG :: MonadNode m => StateNum -> StateNum -> AST.Declaration -> m Edge
-decToPG qs qe d = return (qs, DeclAction d, qe)
+decToPG qs qe d = do
+  case d of
+    AST.RecordDecl i ds -> setFields i ds
+    _                   -> pure ()
+  pure (qs, DeclAction d, qe)
 
 statsToPG :: MonadNode m => StateNum -> StateNum -> [AST.Statement] -> m PG
 statsToPG _ _ [] = return []
@@ -73,15 +89,21 @@ stmToPG :: MonadNode m => StateNum -> StateNum -> AST.Statement -> m PG
 stmToPG qs qe (AST.Write r) = return [(qs, WriteAction r, qe)]
 stmToPG qs qe (AST.Read l) = return [(qs, ReadAction l, qe)]
 stmToPG qs qe (AST.Assignment l r) = return [(qs, AssignAction l r, qe)]
-stmToPG qs qe (AST.RecordAssignment i r1 r2) = do
-  q <- newState
-  return [ (qs, AssignAction (AST.FieldAccess i "fst") r1, q)
-         , (q, AssignAction (AST.FieldAccess i "snd") r2, qe) ]
+
+stmToPG qs qe (AST.RecordAssignment i rs) = do
+  fs <- getFields i
+  states' <- replicateM (length rs - 1) newState
+  let states = qs : states' ++ [qe]
+      triples = zip3 fs rs (zip states (tail states))
+      mkEdge (f, v, (q1, q2)) = (q1, AssignAction (AST.FieldAccess i f) v, q2)
+  pure $ map mkEdge triples
+
 stmToPG qs qe (AST.IfThen cond body) = do
   q <- newState
   let (pos, neg) = branch cond
   rest <- statsToPG q qe body
   return $ [(qs, pos, q), (qs, neg, qe)] ++ rest
+
 stmToPG qs qe (AST.IfThenElse cond body els) = do
   qPos <- newState
   qNeg <- newState
@@ -89,6 +111,7 @@ stmToPG qs qe (AST.IfThenElse cond body els) = do
   restBody <- statsToPG qPos qe body
   restEls <- statsToPG qNeg qe els
   return $ [(qs, pos, qPos), (qs, neg, qNeg)] ++ restBody ++ restEls
+
 stmToPG qs qe (AST.While cond body) = do
   q <- newState
   let (pos, neg) = branch cond

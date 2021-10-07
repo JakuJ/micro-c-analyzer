@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -14,8 +15,8 @@ import qualified Language.MicroC.AST                    as AST
 import           Language.MicroC.ProgramGraph
 
 -- | A result of a Faint Variables analysis.
-newtype FVResult = FVResult {unFV :: ID}
-  deriving (Eq, Ord, Show)
+newtype FVResult = FVResult ID
+  deriving (Eq, Ord, Show) via ID
 
 -- | An empty data type for instantiating the analysis.
 data FV
@@ -32,8 +33,8 @@ instance Analysis FV where
         in
           if x `S.member` s then S.delete x s else s
       ArrayDecl _ _ -> s
-      RecordDecl r ->
-        let xs = [FVResult (RecordField r "fst"), FVResult (RecordField r "snd")]
+      RecordDecl r fs ->
+        let xs = map (FVResult . RecordField r) fs
         in
           s S.\\ S.fromList (filter (`S.member` s) xs)
 

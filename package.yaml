@@ -13,11 +13,10 @@ description:         Please see the README on GitHub at <https://github.com/Jaku
 
 dependencies:
 - base >= 4.7 && < 5
-- text
-- megaparsec
+- array # required by BNFC
 - mtl
 - containers
-- array
+- lens
 
 ghc-options:
   # optimization

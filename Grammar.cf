@@ -1,41 +1,44 @@
-Program . Program ::= Declarations Statements ;
+Program . Program ::= [Declaration] [Statement] ;
 
-PrimDecl . Declaration ::= "int" Ident ";" ;
-ArrayDecl . Declaration ::= "int" "[" Integer "]" Ident ";" ;
-RecordDecl . Declaration ::= "{" "int" "fst" ";" "int" "snd" "}" Ident ";" ;
+PrimDecl . Declaration ::= "int" Ident ;
+ArrayDecl . Declaration ::= "int" "[" Integer "]" Ident ;
+RecordDecl . Declaration ::= "{" [Field] "}" Ident ;
 
-DeclSeq . Declarations ::= Declaration Declarations ;
-DeclNone . Declarations ::= ;
+Field . Field ::= "int" Ident ;
+(:[]) . [Field] ::= Field ;
+(:) . [Field] ::= Field ";" [Field] ;
+
+[] . [Declaration] ::= ;
+(:) . [Declaration] ::= Declaration ";" [Declaration] ;
+
+[] . [Statement] ::= ;
+(:) . [Statement] ::= Statement [Statement] ;
 
 comment "/*" "*/" ;
 
 Variable . ROVSuffix ::= Arith ;
-Record . ROVSuffix ::= "(" Arith "," Arith ")" ;
+Record . ROVSuffix ::= "(" [Arith] ")" ;
+
+(:[]) . [Arith] ::= Arith ;
+(:) . [Arith] ::= Arith "," [Arith] ;
 
 Assignment . Statement ::= LValue ":=" Arith ";" ;
-RecordOrVariable . Statement ::= Ident ":=" ROVSuffix ";" ; 
-IfThen . Statement ::= "if" "(" Boolean ")" "{" Statements "}" ;
-IfThenElse . Statement ::= "if" "(" Boolean ")" "{" Statements "}" "else" "{" Statements "}" ;
-While . Statement ::= "while" "(" Boolean ")" "{" Statements "}" ;
+RecordOrVariable . Statement ::= Ident ":=" ROVSuffix ";" ;
+IfThen . Statement ::= "if" "(" Boolean ")" "{" [Statement] "}" ;
+IfThenElse . Statement ::= "if" "(" Boolean ")" "{" [Statement] "}" "else" "{" [Statement] "}" ;
+While . Statement ::= "while" "(" Boolean ")" "{" [Statement] "}" ;
 ReadL . Statement ::= "read" LValue ";" ;
 ReadI . Statement ::= "read" Ident ";" ;
 Write . Statement ::= "write" Arith ";" ;
 
-StatSeq . Statements ::= Statement Statements ;
-StatNone . Statements ::= ;
-
 Array . LValue ::= Ident "[" Arith "]" ;
-RecordFst . LValue ::= Ident "." "fst" ;
-RecordSnd . LValue ::= Ident "." "snd" ;
+RecordField . LValue ::= Ident "." Ident ;
 
 Lit . LitArith ::= Integer;
 LitNeg . LitArith ::= "-" Integer;
 
 Literal . Arith ::= LitArith ;
-VariableR . Arith ::= Ident ;
-ArrayR . Arith ::= Ident "[" Arith "]" ;
-RecordFstR . Arith ::= Ident "." "fst" ;
-RecordSndR . Arith ::= Ident "." "snd" ;
+VariableR . Arith ::= LValue ;
 AppArith . Arith ::= Arith OpA Arith ;
 Parens . Arith ::= "(" Arith ")" ;
 

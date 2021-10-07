@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -16,8 +17,8 @@ import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.ProgramGraph
 
 -- | A result of a Live Variables analysis.
-newtype LVResult = LVResult {unLV :: ID}
-  deriving (Eq, Ord, Show)
+newtype LVResult = LVResult ID
+  deriving (Eq, Ord, Show) via ID
 
 -- | An empty data type for instantiating the analysis.
 data LV
@@ -35,7 +36,7 @@ instance Analysis LV where
 kill :: (a, Action, c) -> S.Set ID
 kill (_, action, _) = case action of
   DeclAction (VariableDecl i)             -> S.singleton $ Variable i
-  DeclAction (RecordDecl i)               -> S.fromList [RecordField i "fst", RecordField i "snd"]
+  DeclAction (RecordDecl i fs)            -> S.fromList  $ map (RecordField i) fs
   DeclAction (ArrayDecl _ i)              -> S.singleton $ Array i
   AssignAction (AST.Variable i) _         -> S.singleton $ Variable i
   AssignAction (AST.FieldAccess i i') _   -> S.singleton $ RecordField i i'
