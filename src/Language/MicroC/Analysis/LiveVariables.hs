@@ -1,8 +1,3 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies               #-}
-
 module Language.MicroC.Analysis.LiveVariables
 ( LV
 , kill
@@ -11,38 +6,31 @@ module Language.MicroC.Analysis.LiveVariables
 ) where
 
 import qualified Data.Set                     as S
-import           Language.MicroC.Analysis
 import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
+import           Language.MicroC.Analysis
 import           Language.MicroC.ProgramGraph
-
--- | A result of a Live Variables analysis.
-newtype LVResult = LVResult ID
-  deriving (Eq, Ord, Show) via ID
 
 -- | An empty data type for instantiating the analysis.
 data LV
 
 instance Analysis LV where
-  type Result LV = LVResult
+  type Result LV = ID
   bottomValue = S.empty
   initialValue = S.empty
   stateOrder = backward
-  analyze e s = (s S.\\ killed) `S.union` generated
-    where
-      killed = S.map LVResult $ kill e
-      generated = S.map LVResult $ gen e
+  analyze e s = (s S.\\ kill e) `S.union` gen e
 
 kill :: (a, Action, c) -> S.Set ID
 kill (_, action, _) = case action of
-  DeclAction (VariableDecl i)             -> S.singleton $ Variable i
-  DeclAction (RecordDecl i fs)            -> S.fromList  $ map (RecordField i) fs
-  DeclAction (ArrayDecl _ i)              -> S.singleton $ Array i
-  AssignAction (AST.Variable i) _         -> S.singleton $ Variable i
-  AssignAction (AST.FieldAccess i i') _   -> S.singleton $ RecordField i i'
-  ReadAction (AST.Variable i)             -> S.singleton $ Variable i
-  ReadAction (AST.FieldAccess i i')       -> S.singleton $ RecordField i i'
-  _                                       -> S.empty
+  DeclAction (VariableDecl i)           -> S.singleton $ Variable i
+  DeclAction (RecordDecl i fs)          -> S.fromList  $ map (RecordField i) fs
+  DeclAction (ArrayDecl _ i)            -> S.singleton $ Array i
+  AssignAction (AST.Variable i) _       -> S.singleton $ Variable i
+  AssignAction (AST.FieldAccess i i') _ -> S.singleton $ RecordField i i'
+  ReadAction (AST.Variable i)           -> S.singleton $ Variable i
+  ReadAction (AST.FieldAccess i i')     -> S.singleton $ RecordField i i'
+  _                                     -> S.empty
 
 gen :: (a, Action, c) -> S.Set ID
 gen (_, action, _) = case action of

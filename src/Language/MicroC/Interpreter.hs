@@ -1,10 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE TemplateHaskell  #-}
-
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# LANGUAGE DataKinds        #-}
 
 module Language.MicroC.Interpreter
 ( Memory
@@ -14,6 +9,7 @@ module Language.MicroC.Interpreter
 
 import           Control.Lens             (makeLenses, uses, (%=))
 import           Control.Monad.State.Lazy
+import           Data.Bits                ((.&.), (.|.))
 import qualified Data.Map.Lazy            as M
 import           Language.MicroC.AST
 
@@ -50,6 +46,7 @@ evalDecls = mapM_ evalDecl
 -- Declarations
 evalDecl :: Monad m => Declaration -> Env m ()
 evalDecl (VariableDecl name) = memory %= M.insert (Variable name) 0
+evalDecl (ArrayDecl size name) = mapM_ (\ix -> memory %= M.insert (ArrayIndex name (Literal ix)) 0) [0 .. size - 1]
 evalDecl (RecordDecl name fs) = do
   fields %= M.insert name fs
   forM_ fs $ \f -> memory %= M.insert (FieldAccess name f) 0
@@ -89,9 +86,22 @@ evalR (OpA l op r) = op2fun op <$> evalR l <*> evalR r
             Add -> (+)
             Sub -> (-)
             Mult -> (*)
+            Div -> div
+            Mod -> mod
+            BitAnd -> (.&.)
+            BitOr -> (.|.)
+evalR (OpB l op r) = op2fun op <$> evalR l <*> evalR r
+  where
+    op2fun = \case
+            And -> (&&)
+            Or -> (||)
+evalR (Not b) = not <$> evalR b
 evalR (OpR l op r) = op2fun op <$> evalR l <*> evalR r
     where
         op2fun = \case
             Lt -> (<)
-            Neq -> (/=)
+            Gt -> (>)
+            Ge -> (>=)
             Le -> (<=)
+            Neq -> (/=)
+            Eq -> (==)

@@ -52,6 +52,9 @@ Plus . OpA ::= "+" ;
 Minus . OpA ::= "-" ;
 Mult . OpA ::= "*" ;
 Div . OpA ::= "/" ;
+Mod . OpA ::= "%" ;
+BitAnd . OpA ::= "&" ;
+BitOr . OpA ::= "|" ;
 
 LT . OpRel ::= "<";
 LTE . OpRel ::= "<=";
@@ -60,5 +63,5 @@ GTE . OpRel ::= ">=";
 EQ . OpRel ::= "==";
 NEQ . OpRel ::= "!=";
 
-And . OpBoolean ::= "&";
-Or . OpBoolean ::= "|";
+And . OpBoolean ::= "&&";
+Or . OpBoolean ::= "||";

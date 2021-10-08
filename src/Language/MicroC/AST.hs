@@ -1,8 +1,4 @@
-{-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE StandaloneDeriving     #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
