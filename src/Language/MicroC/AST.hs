@@ -1,8 +1,4 @@
-{-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE StandaloneDeriving     #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
@@ -49,8 +45,8 @@ data Declaration where
   VariableDecl :: Identifier -> Declaration
   -- | Declaration of an array with a given size and name.
   ArrayDecl :: Int -> Identifier -> Declaration
-  -- | Declaration of a record with a given name. We assume the fields are called /fst/ and /snd/.
-  RecordDecl :: Identifier -> Declaration
+  -- | Declaration of a record with a given name.
+  RecordDecl :: Identifier -> [Identifier] -> Declaration
     deriving (Show)
 
 -- | A type alias for declarations. Leaves room to change the list to a recursive datatype if need be.
@@ -109,8 +105,8 @@ data OpBool = And | Or
 data Statement where
   -- | An assignment of an R-value to an L-value.
   Assignment :: LValue 'CInt -> RValue 'CInt -> Statement
-  -- | An assignment of two R-values to consecuive fields in a record.
-  RecordAssignment :: Identifier -> RValue 'CInt -> RValue 'CInt -> Statement
+  -- | An assignment of two R-values to consecutive fields in a record.
+  RecordAssignment :: Identifier -> [RValue 'CInt] -> Statement
   -- | An __if-then__ statement without the __else__ clause.
   IfThen :: RValue 'CBool -> Statements -> Statement
   -- | An __if-then-else__ statement.
@@ -129,6 +125,6 @@ deriving instance Ord Statement
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]
 
--- | Represents a complete MicroC program consisiting of 'Declarations' and 'Statements'.
+-- | Represents a complete MicroC program.
 data Program = Program Declarations Statements
   deriving (Show)

@@ -1,8 +1,5 @@
-{-# LANGUAGE AllowAmbiguousTypes    #-}
-{-# LANGUAGE DefaultSignatures      #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts    #-}
 
 module Language.MicroC.Analysis
 ( Analysis(..)
@@ -18,7 +15,7 @@ import           Language.MicroC.ProgramGraph (Edge, StateNum)
 -- | An abstract analysis monad.
 --   Results need to have an instance of `Ord` since we are using `Set`.
 class Ord (Result m) => Analysis m where
-  type Result m = r | r -> m
+  type Result m
   -- ^ The type of the elements of the sets returned by the analysis.
   bottomValue :: Set (Result m)
   -- ^ The value assigned as an initial solution to all states but the first at the start of any worklist algorithm.
@@ -43,6 +40,7 @@ forward (qs, _, qe) = (qs, qe)
 backward (qs, _, qe) = (qe, qs)
 -- ^ Edge state order for backward analyses.
 
+-- | Result type for multiple analyses.
 data ID
   = Variable Identifier
   -- ^ Name of a variable.
@@ -50,4 +48,9 @@ data ID
   -- ^ Name of an array, we amalgamate those.
   | RecordField Identifier Identifier
   -- ^ Name of a record and its field.
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
+
+instance Show ID where
+  show (Variable i)      = i
+  show (Array i)         = i
+  show (RecordField r f) = r <> "." <> f

@@ -1,5 +1,3 @@
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
-
 module InterpreterSpec (
     spec
 ) where

@@ -12,12 +12,25 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/JakuJ/micro-c-analyzer#readme>
 
 dependencies:
+- array # required by BNFC
 - base >= 4.7 && < 5
-- text
-- megaparsec
-- mtl
 - containers
-- array
+- lens
+- mtl
+
+default-extensions:
+- DataKinds
+- DefaultSignatures
+- GADTs
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- MultiParamTypeClasses
+- RankNTypes
+- StandaloneDeriving
+- TypeApplications
+- TypeFamilies
+- TypeFamilyDependencies
+- ViewPatterns
 
 ghc-options:
   # optimization
@@ -26,7 +39,6 @@ ghc-options:
   # warnings
   - -Wall
   - -Wcompat
-  - -Wno-unused-do-bind
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
   - -Wredundant-constraints

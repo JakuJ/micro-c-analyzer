@@ -1,6 +1,5 @@
-{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 module Language.MicroC.Worklist
 ( Solution
@@ -21,7 +20,7 @@ type Solution m = M.Map StateNum (S.Set (Result m))
 type WorklistAlgorithm m = Analysis m => PG -> StateNum -> Solution m
 
 -- | An implementation of the Round Robin worklist algorithm.
-roundRobin :: forall m . WorklistAlgorithm m
+roundRobin :: forall m. WorklistAlgorithm m
 roundRobin pg s0 = execState go M.empty
   where
     go :: State (Solution m) ()
@@ -30,10 +29,10 @@ roundRobin pg s0 = execState go M.empty
       let qq = states pg S.\\ S.singleton s0
 
       -- set bottom value to all states
-      forM_ qq $ \s -> modify (M.insert s bottomValue)
+      forM_ qq $ \s -> modify (M.insert s (bottomValue @m))
 
       -- set initial value to state s0
-      modify (M.insert s0 initialValue)
+      modify (M.insert s0 (initialValue @m))
 
       -- iterate until False is returned for every element
       whileM $ anyM pg $ \e -> do
@@ -43,8 +42,8 @@ roundRobin pg s0 = execState go M.empty
         aq <- gets (M.! q)
         aq' <- gets (M.! q')
         -- calculate left side of the constraint
-        let leftSide = analyze e aq
-            satisfied = constraint leftSide aq'
+        let leftSide = analyze @m e aq
+            satisfied = constraint @m leftSide aq'
         if not satisfied then do
           -- if not satisfied, we set update the solution for state q'
           modify $ M.insert q' (S.union aq' leftSide)

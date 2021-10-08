@@ -43,14 +43,26 @@ library
       Paths_micro_c_analyzer
   hs-source-dirs:
       src
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wno-unused-do-bind -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  default-extensions:
+      DataKinds
+      DefaultSignatures
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      RankNTypes
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeFamilyDependencies
+      ViewPatterns
+  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
       array
     , base >=4.7 && <5
     , containers
-    , megaparsec
+    , lens
     , mtl
-    , text
   default-language: Haskell2010
 
 executable micro-c-analyzer-exe
@@ -59,15 +71,27 @@ executable micro-c-analyzer-exe
       Paths_micro_c_analyzer
   hs-source-dirs:
       app
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wno-unused-do-bind -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+      DataKinds
+      DefaultSignatures
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      RankNTypes
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeFamilyDependencies
+      ViewPatterns
+  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
     , base >=4.7 && <5
     , containers
-    , megaparsec
+    , lens
     , micro-c-analyzer
     , mtl
-    , text
   default-language: Haskell2010
 
 test-suite micro-c-analyzer-test
@@ -78,14 +102,26 @@ test-suite micro-c-analyzer-test
       Paths_micro_c_analyzer
   hs-source-dirs:
       test
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wno-unused-do-bind -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+      DataKinds
+      DefaultSignatures
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      RankNTypes
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeFamilyDependencies
+      ViewPatterns
+  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
     , base >=4.7 && <5
     , containers
     , hspec
-    , megaparsec
+    , lens
     , micro-c-analyzer
     , mtl
-    , text
   default-language: Haskell2010
