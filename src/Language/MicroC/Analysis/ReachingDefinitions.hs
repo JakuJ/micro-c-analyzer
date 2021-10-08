@@ -53,4 +53,7 @@ instance Analysis RD where
 
 -- TODO
 getAllNames :: PG -> [Identifier]
-getAllNames pg = []
+getAllNames [] = []
+getAllNames ((_,action,_):rest) = case action of 
+  DeclAction (VariableDecl x) -> x : getAllNames rest
+  _                           -> getAllNames rest
