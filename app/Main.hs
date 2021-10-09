@@ -18,9 +18,9 @@ instance MonadEval IOEval where
   evalRead = liftIO readLn
   evalWrite = IOEval . print
 
-main :: IO ()
-main = do
-  prog <- parseProgram "sources/records.c"
+analyseFile :: FilePath -> IO ()
+analyseFile path = do
+  prog <- parseProgram $ "sources/" <> path <> ".c"
   case prog of
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do
@@ -37,3 +37,6 @@ main = do
   where
     printEdge :: Edge -> String
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
+
+main :: IO ()
+main = analyseFile "even"

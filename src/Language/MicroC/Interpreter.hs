@@ -2,24 +2,42 @@
 {-# LANGUAGE TemplateHaskell  #-}
 
 module Language.MicroC.Interpreter
-( Memory
+( -- * Types
+  Memory
 , MonadEval(..)
+  -- * Functions
 , evalProgram
 ) where
 
-import           Control.Lens             (makeLenses, uses, (%=))
+import           Control.Lens             hiding (op)
 import           Control.Monad.State.Lazy
 import           Data.Bits                ((.&.), (.|.))
-import qualified Data.Map.Lazy            as M
+import           Data.Map.Lazy            (Map, empty)
 import           Language.MicroC.AST
 
 -- | The type of the internal state of the interpreter - a mapping from variable names to their values.
 data Memory = Memory
-  { _memory :: M.Map (LValue 'CInt) Int
-  , _fields :: M.Map Identifier [Identifier]
+  { _memory :: Map (LValue 'CInt) Int
+  -- ^ The memory, maps L-Values to their runtime values. Arrays are represented with `ArrayIndex` and a `Literal` index.
+  , _fields :: Map Identifier [Identifier]
+  -- ^ A mapping from record names to lists of their field names.
   }
 
 makeLenses ''Memory
+
+-- | Get the current value of an 'LValue' from the memory.
+-- An exception is raised if we are accessing an array and the index is out of range.
+-- Reference to an undefined variable or record field returns 0.
+referTo :: Monad m => LValue 'CInt -> Env m Int
+referTo = \case
+  ArrayIndex arr i -> do
+    i' <- evalR i
+    use $ memory . at (ArrayIndex arr (Literal i')) . non (outOfBounds arr i')
+  lval -> use $ memory . at lval . non 0
+
+-- | Throw an exception with a message and terminate the program.
+outOfBounds :: Identifier -> Int -> a
+outOfBounds arr i = error $ "Index " <> show i <> " out of range for array " <> arr
 
 -- | The interpretation monad defining abstract IO operations.
 class Monad m => MonadEval m where
@@ -28,15 +46,15 @@ class Monad m => MonadEval m where
     -- | Implements the __write__ statement.
     evalWrite :: Show (TypeRepr t) => TypeRepr t -> m ()
 
--- | The monadic stack consisting of 'StateT' (variable store) and 'MonadEval' (__read__ / __write__).
+-- | Monadic stack for the interpreter. m is usually some MonadEval.
 type Env m x = StateT Memory m x
 
--- | Interprets a 'Program' and returns the computation in the 'MonadEval' monad.
+-- | Interprets a 'Program' and returns the computation in some 'MonadEval'.
 -- This can be then executes resulting in the state of the 'Memory' after program completion.
 evalProgram :: MonadEval m => Program -> m Memory
-evalProgram (Program decls stats) = execStateT (evalDecls decls >> evalStats stats) (Memory M.empty M.empty)
+evalProgram (Program decls stats) = execStateT (evalDecls decls >> evalStats stats) (Memory empty empty)
 
--- Helpers
+-- Helper functions
 evalStats :: MonadEval m => Statements -> Env m ()
 evalStats = mapM_ evalStat
 
@@ -45,63 +63,59 @@ evalDecls = mapM_ evalDecl
 
 -- Declarations
 evalDecl :: Monad m => Declaration -> Env m ()
-evalDecl (VariableDecl name) = memory %= M.insert (Variable name) 0
-evalDecl (ArrayDecl size name) = mapM_ (\ix -> memory %= M.insert (ArrayIndex name (Literal ix)) 0) [0 .. size - 1]
+evalDecl (VariableDecl name) = memory . at (Variable name) .= Just 0
+evalDecl (ArrayDecl size name) = forM_ [0 .. size - 1] $ \i -> memory . at (ArrayIndex name (Literal i)) .= Just 0
 evalDecl (RecordDecl name fs) = do
-  fields %= M.insert name fs
-  forM_ fs $ \f -> memory %= M.insert (FieldAccess name f) 0
+  fields . at name .= Just fs
+  forM_ fs $ \f -> memory . at (FieldAccess name f) .= Just 0
 
 -- Statements
 evalStat :: MonadEval m => Statement -> Env m ()
-evalStat (Assignment lval rval) = do
-    r <- evalR rval
-    memory %= M.insert lval r
+evalStat (Assignment lval rval) = (memory . at lval) <~ Just <$> evalR rval
 evalStat (RecordAssignment i rs) = do
-  fs <- uses fields (M.! i)
-  forM_ (zip fs rs) $ \(f, r) -> do
-    v <- evalR r
-    memory %= M.insert (FieldAccess i f) v
+  fs <- use (fields . ix i)
+  forM_ (zip fs rs) $ \(f, r) ->
+    memory . at (FieldAccess i f) <~ Just <$> evalR r
 evalStat (IfThen cond body) = do
     true <- evalR cond
     when true $ evalStats body
 evalStat (IfThenElse cond body els) = do
     true <- evalR cond
-    if true then evalStats body
-    else evalStats els
+    if true then evalStats body else evalStats els
 evalStat loop@(While cond body) = do
     true <- evalR cond
     when true $ do
-        evalStats body
-        evalStat loop
-evalStat (Read lval) = (memory %=) . M.insert lval =<< lift evalRead
+      evalStats body
+      evalStat loop
+evalStat (Read lval) = (memory . at lval .=) . Just =<< lift evalRead
 evalStat (Write rval) = lift . evalWrite =<< evalR rval
 
 -- R-values
 evalR :: Monad m => RValue t -> Env m (TypeRepr t)
-evalR (Reference lval) = uses memory (M.! lval)
+evalR (Reference lval) = referTo lval
 evalR (Literal v) = pure v
 evalR (OpA l op r) = op2fun op <$> evalR l <*> evalR r
     where
         op2fun = \case
-            Add -> (+)
-            Sub -> (-)
-            Mult -> (*)
-            Div -> div
-            Mod -> mod
+            Add    -> (+)
+            Sub    -> (-)
+            Mult   -> (*)
+            Div    -> div
+            Mod    -> mod
             BitAnd -> (.&.)
-            BitOr -> (.|.)
+            BitOr  -> (.|.)
 evalR (OpB l op r) = op2fun op <$> evalR l <*> evalR r
   where
     op2fun = \case
             And -> (&&)
-            Or -> (||)
+            Or  -> (||)
 evalR (Not b) = not <$> evalR b
 evalR (OpR l op r) = op2fun op <$> evalR l <*> evalR r
     where
         op2fun = \case
-            Lt -> (<)
-            Gt -> (>)
-            Ge -> (>=)
-            Le -> (<=)
+            Lt  -> (<)
+            Gt  -> (>)
+            Ge  -> (>=)
+            Le  -> (<=)
             Neq -> (/=)
-            Eq -> (==)
+            Eq  -> (==)

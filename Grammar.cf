@@ -1,3 +1,5 @@
+comment "/*" "*/" ;
+
 Program . Program ::= [Declaration] [Statement] ;
 
 PrimDecl . Declaration ::= "int" Ident ;
@@ -13,8 +15,6 @@ Field . Field ::= "int" Ident ;
 
 [] . [Statement] ::= ;
 (:) . [Statement] ::= Statement [Statement] ;
-
-comment "/*" "*/" ;
 
 Variable . ROVSuffix ::= Arith ;
 Record . ROVSuffix ::= "(" [Arith] ")" ;
@@ -34,27 +34,35 @@ Write . Statement ::= "write" Arith ";" ;
 Array . LValue ::= Ident "[" Arith "]" ;
 RecordField . LValue ::= Ident "." Ident ;
 
-Lit . LitArith ::= Integer;
-LitNeg . LitArith ::= "-" Integer;
+NegLiteral . Arith4 ::= "-" Integer ;
+Literal . Arith4 ::= Integer ;
+ArrRecordR . Arith4 ::= LValue ;
+VariableR . Arith4 ::= Ident ;
+Mod . Arith3 ::= Arith3 "%" Arith4 ;
+Div . Arith3 ::= Arith3 "/" Arith4 ;
+Mult . Arith3 ::= Arith3 "*" Arith4 ;
+Plus . Arith2 ::= Arith2 "+" Arith3 ;
+Minus . Arith2 ::= Arith2 "-" Arith3 ;
+BitAnd . Arith1 ::= Arith1 "&" Arith2 ;
+BitOr . Arith ::= Arith "|" Arith1 ;
 
-Literal . Arith ::= LitArith ;
-VariableR . Arith ::= LValue ;
-AppArith . Arith ::= Arith OpA Arith ;
-Parens . Arith ::= "(" Arith ")" ;
+_ . Arith4 ::= "(" Arith ")" ;
+_ . Arith3 ::= Arith4 ;
+_ . Arith2 ::= Arith3 ;
+_ . Arith1 ::= Arith2 ;
+_ . Arith ::= Arith1 ;
 
-True . Boolean ::= "true" ;
-False . Boolean ::= "false" ;
-AppRel . Boolean ::= Arith OpRel Arith ;
-AppBoolean . Boolean ::= Boolean OpBoolean Boolean ;
-Not . Boolean ::= "not" Boolean ;
+True . Boolean3 ::= "true" ;
+False . Boolean3 ::= "false" ;
+Relation . Boolean3 ::= Arith OpRel Arith ;
+Not . Boolean2 ::= "not" Boolean3 ;
+And . Boolean1 ::= Boolean1 "&&" Boolean2 ;
+Or . Boolean ::= Boolean "||" Boolean1 ;
 
-Plus . OpA ::= "+" ;
-Minus . OpA ::= "-" ;
-Mult . OpA ::= "*" ;
-Div . OpA ::= "/" ;
-Mod . OpA ::= "%" ;
-BitAnd . OpA ::= "&" ;
-BitOr . OpA ::= "|" ;
+_ . Boolean3 ::= "(" Boolean ")" ;
+_ . Boolean2 ::= Boolean3 ;
+_ . Boolean1 ::= Boolean2 ;
+_ . Boolean ::= Boolean1 ;
 
 LT . OpRel ::= "<";
 LTE . OpRel ::= "<=";
@@ -62,6 +70,3 @@ GT . OpRel ::= ">";
 GTE . OpRel ::= ">=";
 EQ . OpRel ::= "==";
 NEQ . OpRel ::= "!=";
-
-And . OpBoolean ::= "&&";
-Or . OpBoolean ::= "||";

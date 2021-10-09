@@ -9,9 +9,10 @@ module Language.MicroC.ProgramGraph
 , Action(..)
 ) where
 
-import           Control.Lens             (makeLenses, uses, (%=), (<<+=))
+import           Control.Lens
 import           Control.Monad.State.Lazy
-import qualified Data.Map.Lazy            as M
+import           Data.Map.Lazy            (Map)
+import           Data.Map.Lens            (toMapOf)
 import           Language.MicroC.AST
 
 -- | Different states are represented using integers.
@@ -34,7 +35,7 @@ type PG = [Edge]
 
 data Memory = Memory
   { _nextInt :: Int
-  , _fields  :: M.Map Identifier [Identifier]
+  , _fields  :: Map Identifier [Identifier]
   }
 
 makeLenses ''Memory
@@ -42,39 +43,41 @@ makeLenses ''Memory
 -- | The monad used for constructing the program graph.
 type NodeM = State Memory
 
+-- | Traverse over record declarations and make a `Map` from their names to their field names.
+declaredRecords :: Declarations -> Map Identifier [Identifier]
+declaredRecords = toMapOf $ traverse . _RecordDecl . itraversed
+
 -- | Return the nextInt field and then increment it.
 newState :: NodeM StateNum
 newState = nextInt <<+= 1
 
--- | Remember the field names of a record with the given name.
-setFields :: Identifier -> [Identifier] -> NodeM ()
-setFields r fs = fields %= M.insert r fs
-
 -- | Get the field names of a record with the given name.
 getFields :: Identifier -> NodeM [Identifier]
-getFields r = uses fields (M.! r)
+getFields r = use $ fields . ix r
 
 toPG :: Program -> PG
-toPG p = evalState (toPG' 0 (-1) p) (Memory 1 M.empty)
+toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds)
 
 toPG' :: StateNum -> StateNum ->  Program -> NodeM PG
 toPG' qs qe (Program ds ss) = do
+  -- have declarations end in a state with this temporary number
+  let flag = -2
+  decs <- decsToPG qs flag ds
+  -- a correctly ordered state to put after declarations
   q <- newState
-  (++) <$> decsToPG qs q ds <*> stmsToPG q qe ss
+  -- update all edges that end in 'flag' to end in 'q'
+  let decsToQ = decs & traverse . _3 . filtered (== flag) .~ q
+  -- generate edges from statements starting from q
+  stats <- stmsToPG q qe ss
+  pure $ decsToQ ++ stats
 
 decsToPG :: StateNum -> StateNum -> [Declaration] -> NodeM PG
 decsToPG _ _ [] = pure []
-decsToPG qs qe [x] = pure <$> decToPG qs qe x
+decsToPG qs qe [d] = pure [(qs, DeclAction d, qe)]
 decsToPG qs qe (d : ds) = do
   q <- newState
-  (:) <$> decToPG qs q d <*> decsToPG q qe ds
-
-decToPG :: StateNum -> StateNum -> Declaration -> NodeM Edge
-decToPG qs qe d = do
-  case d of
-    RecordDecl i ds -> setFields i ds
-    _               -> pure ()
-  pure (qs, DeclAction d, qe)
+  rest <- decsToPG q qe ds
+  pure $ (qs, DeclAction d, q) : rest
 
 stmsToPG :: StateNum -> StateNum -> [Statement] -> NodeM PG
 stmsToPG _ _ [] = pure []
@@ -84,7 +87,7 @@ stmsToPG qs qe (s : ss) = do
   (++) <$> stmToPG qs q s <*> stmsToPG q qe ss
 
 test :: RValue 'CBool -> (Action, Action)
-test v = (BoolAction v, BoolAction (Not v))
+test v = (v, Not v) & each %~ BoolAction
 
 stmToPG :: StateNum -> StateNum -> Statement -> NodeM PG
 stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
@@ -102,16 +105,16 @@ stmToPG qs qe (RecordAssignment i rs) = do
 stmToPG qs qe (IfThen (test -> (yes, no)) body) = do
   q <- newState
   rest <- stmsToPG q qe body
-  pure $ [(qs, yes, q), (qs, no, qe)] ++ rest
+  pure $ (qs, yes, q) : (qs, no, qe) : rest
 
 stmToPG qs qe (IfThenElse (test -> (yes, no)) body els) = do
   qYes <- newState
   qNo <- newState
   bodyStms <- stmsToPG qYes qe body
   elseStms <- stmsToPG qNo qe els
-  pure $ [(qs, yes, qYes), (qs, no, qNo)] ++ bodyStms ++ elseStms
+  pure $ (qs, yes, qYes) : (qs, no, qNo) : bodyStms ++ elseStms
 
 stmToPG qs qe (While (test -> (yes, no)) body) = do
   q <- newState
   rest <- stmsToPG q qs body
-  pure $ [(qs, yes, q), (qs, no, qe)] ++ rest
+  pure $ (qs, yes, q) : (qs, no, qe) : rest

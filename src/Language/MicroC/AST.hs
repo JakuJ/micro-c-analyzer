@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
 module Language.MicroC.AST
@@ -21,7 +22,11 @@ module Language.MicroC.AST
 , OpArith(..)
 , OpRel(..)
 , OpBool(..)
+ -- * Miscellaneous
+, _RecordDecl
 ) where
+
+import           Control.Lens (makePrisms)
 
 -- | Represents a type in the MicroC language.
 data CType
@@ -49,6 +54,8 @@ data Declaration where
   RecordDecl :: Identifier -> [Identifier] -> Declaration
     deriving (Show)
 
+makePrisms ''Declaration
+
 -- | A type alias for declarations. Leaves room to change the list to a recursive datatype if need be.
 type Declarations = [Declaration]
 
@@ -60,7 +67,7 @@ data RValue (t :: CType) where
   -- | A reference to an L-value.
   Reference :: LValue 'CInt -> RValue 'CInt
   -- | A reference to a literal value.
-  Literal :: Show (TypeRepr t) => TypeRepr t -> RValue t
+  Literal :: TypeRepr t -> RValue t
   -- | An application of a binary arithmetic operator.
   OpA :: RValue 'CInt -> OpArith -> RValue 'CInt -> RValue 'CInt
   -- | An application of a relational operator.
@@ -70,7 +77,7 @@ data RValue (t :: CType) where
   -- | Boolean negation.
   Not :: RValue 'CBool -> RValue 'CBool
 
-deriving instance Show (RValue t)
+deriving instance Show (TypeRepr t) => Show (RValue t)
 deriving instance Eq (TypeRepr t) => Eq (RValue t)
 deriving instance Ord (TypeRepr t) => Ord (RValue t)
 
@@ -84,7 +91,7 @@ data LValue (t :: CType) where
   -- | Used when assigning to a field in a record.
   FieldAccess :: Identifier -> Identifier -> LValue 'CInt
 
-deriving instance Show (LValue (t :: CType))
+deriving instance Show (LValue t)
 deriving instance Eq (LValue t)
 deriving instance Ord (LValue t)
 
