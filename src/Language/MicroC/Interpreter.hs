@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Language.MicroC.Interpreter
 ( -- * Types
@@ -42,9 +41,9 @@ outOfBounds arr i = error $ "Index " <> show i <> " out of range for array " <> 
 -- | The interpretation monad defining abstract IO operations.
 class Monad m => MonadEval m where
     -- | Implements the __read__ statement.
-    evalRead :: Read (TypeRepr t) => m (TypeRepr t)
+    evalRead :: m (TypeRepr 'CInt)
     -- | Implements the __write__ statement.
-    evalWrite :: Show (TypeRepr t) => TypeRepr t -> m ()
+    evalWrite :: TypeRepr 'CInt -> m ()
 
 -- | Monadic stack for the interpreter. m is usually some MonadEval.
 type Env m x = StateT Memory m x

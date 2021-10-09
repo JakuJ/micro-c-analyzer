@@ -34,10 +34,9 @@ data CType
   = CInt
   -- | The type of Boolean expressions.
   | CBool
-    deriving (Show)
 
 -- | An injective mapping from MicroC types to the Haskell types used to represent their runtime values.
-type family TypeRepr (t :: CType) = q | q -> t where
+type family TypeRepr (t :: CType) where
   TypeRepr 'CInt = Int
   TypeRepr 'CBool = Bool
 
@@ -45,13 +44,13 @@ type family TypeRepr (t :: CType) = q | q -> t where
 type Identifier = String
 
 -- | Represents a single declaration.
-data Declaration where
+data Declaration
   -- | Declaration of a variable with a given name.
-  VariableDecl :: Identifier -> Declaration
+  = VariableDecl Identifier
   -- | Declaration of an array with a given size and name.
-  ArrayDecl :: Int -> Identifier -> Declaration
+  | ArrayDecl Int Identifier
   -- | Declaration of a record with a given name.
-  RecordDecl :: Identifier -> [Identifier] -> Declaration
+  | RecordDecl Identifier [Identifier]
     deriving (Show)
 
 makePrisms ''Declaration
@@ -109,25 +108,22 @@ data OpBool = And | Or
 
 -- | A statement is a top-level construct that does not evaluate to a value,
 -- but otherwise advances the control flow of a program.
-data Statement where
+data Statement
   -- | An assignment of an R-value to an L-value.
-  Assignment :: LValue 'CInt -> RValue 'CInt -> Statement
+  = Assignment (LValue 'CInt) (RValue 'CInt)
   -- | An assignment of two R-values to consecutive fields in a record.
-  RecordAssignment :: Identifier -> [RValue 'CInt] -> Statement
+  | RecordAssignment Identifier [RValue 'CInt]
   -- | An __if-then__ statement without the __else__ clause.
-  IfThen :: RValue 'CBool -> Statements -> Statement
+  | IfThen (RValue 'CBool) Statements
   -- | An __if-then-else__ statement.
-  IfThenElse :: RValue 'CBool -> Statements -> Statements -> Statement
+  | IfThenElse (RValue 'CBool) Statements Statements
   -- | A __while__ statement.
-  While :: RValue 'CBool -> Statements -> Statement
+  | While (RValue 'CBool) Statements
   -- | A __read__ statement.
-  Read :: LValue 'CInt -> Statement
+  | Read (LValue 'CInt)
   -- | A __write__ statement.
-  Write :: RValue 'CInt -> Statement
-
-deriving instance Show Statement
-deriving instance Eq Statement
-deriving instance Ord Statement
+  | Write (RValue 'CInt)
+    deriving (Show, Eq, Ord)
 
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]
