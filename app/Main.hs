@@ -5,6 +5,7 @@ import           Control.Monad.IO.Class                  (MonadIO (..))
 import           Data.Foldable                           (toList)
 import qualified Data.Map                                as M
 import           Language.MicroC.Analysis.FaintVariables (FV)
+import           Language.MicroC.Analysis.DangerousVariables (DV)
 import           Language.MicroC.Interpreter             (MonadEval (..),
                                                           evalProgram)
 import           Language.MicroC.Parser                  (parseProgram)
@@ -20,12 +21,12 @@ instance MonadEval IOEval where
 
 main :: IO ()
 main = do
-  prog <- parseProgram "sources/records.c"
+  prog <- parseProgram "sources/factorial.c"
   case prog of
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do
       let pg = toPG ast
-          solution = roundRobin @FV pg (-1)
+          solution = roundRobin @DV pg (-1)
       putStrLn "AST:"
       print ast
       putStrLn "PG:"

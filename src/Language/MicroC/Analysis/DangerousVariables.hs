@@ -22,7 +22,7 @@ instance Analysis DV where
         VariableDecl n  ->
             let x = Variable n
             in
-              if x `S.intersection` s == S.empty then S.delete x s else s
+              if S.singleton x `S.intersection` s == S.empty then S.delete x s else s
         ArrayDecl _ _   -> s
         RecordDecl r fs ->
             let xs = map (RecordField r) fs
@@ -35,12 +35,12 @@ instance Analysis DV where
             in
               if rhs `S.intersection` s == S.empty then S.delete x s else s `S.union` S.singleton x
         ArrayIndex n ix ->
-            let a = Array n
+            let _ = Array n
                 ixfvs = fv ix
                 rhsfvs = fv rv
                 fvs = ixfvs `S.union` rhsfvs
             in
-               if fvs `S.intersection` s == S.empty then s else s `S.union` n
+               if fvs `S.intersection` s == S.empty then s else s `S.union` S.singleton (Array n)
         FieldAccess n field ->
             let x = RecordField n field
                 rhs = fv rv
