@@ -32,6 +32,7 @@ library
       Grammar.Print
       Grammar.Skel
       Language.MicroC.Analysis
+      Language.MicroC.Analysis.DangerousVariables
       Language.MicroC.Analysis.FaintVariables
       Language.MicroC.Analysis.LiveVariables
       Language.MicroC.AST
