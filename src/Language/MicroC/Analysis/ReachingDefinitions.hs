@@ -27,11 +27,12 @@ instance Analysis RD where
   analyze e s = (s S.\\ kill e) `S.union` gen e
 
 -- Missing record dec: How to refer to a record itself, and not an access?
+-- Need to pass PG to analysis and kill/gen
 kill :: Edge  -> S.Set RDResult
 kill (_, action, _) = case action of
   DeclAction (VariableDecl x)             -> S.fromList killDefinition Variable x
-  DeclAction (RecordDecl x)               -> S.empty
-  DeclAction (ArrayDecl _ a)              -> S.fromList killDefinition Array x
+  DeclAction (RecordDecl x _)             -> S.empty
+  DeclAction (ArrayDecl _ x)              -> S.fromList killDefinition Array x
   AssignAction (AST.Variable x) _         -> S.fromList killDefinition Variable x
   AssignAction (AST.FieldAccess i i') _   -> S.fromList killDefinition RecordField i i'
   ReadAction (AST.Variable x)             -> S.fromList killDefinition Variable x
@@ -41,8 +42,8 @@ kill (_, action, _) = case action of
 gen :: Edge  -> S.Set RDResult
 gen (qs, action, qe) = case action of
   DeclAction (VariableDecl x)             -> S.singleton (Variable x, qs, qe)
-  DeclAction (RecordDecl x)               -> S.empty
-  DeclAction (ArrayDecl _ a)              -> S.singleton (Array x, qs, qe)
+  DeclAction (RecordDecl x _)             -> S.empty
+  DeclAction (ArrayDecl _ x)              -> S.singleton (Array x, qs, qe)
   AssignAction (AST.Variable x) _         -> S.singleton (Variable x, qs, qe)
   AssignAction (AST.ArrayIndex x _) _     -> S.singleton (Array x, qs, qe)
   AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i', qs, qe)
