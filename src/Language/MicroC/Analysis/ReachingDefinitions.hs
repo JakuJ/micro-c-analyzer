@@ -44,10 +44,10 @@ gen (qs, action, qe) = case action of
   DeclAction (RecordDecl x)               -> S.empty
   DeclAction (ArrayDecl _ a)              -> S.singleton (Array x, qs, qe)
   AssignAction (AST.Variable x) _         -> S.singleton (Variable x, qs, qe)
-  AssignAction (AST.ArrayIndex _)         -> S.singleton (Array x, qs, qe)
+  AssignAction (AST.ArrayIndex x _) _     -> S.singleton (Array x, qs, qe)
   AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i', qs, qe)
   ReadAction (AST.Variable x)             -> S.singleton (Variable x, qs, qe)
-  ReadAction (AST.ArrayIndex _)           -> S.singleton (Array x, qs, qe)
+  AssignAction (AST.ArrayIndex x _) _     -> S.singleton (Array x, qs, qe)
   ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i', qs, qe)
   _                                       -> S.empty
 
