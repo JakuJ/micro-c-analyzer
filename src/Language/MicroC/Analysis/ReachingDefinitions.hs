@@ -13,47 +13,57 @@ import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.ProgramGraph
 
--- | A result of a Reaching Definitions analysis.
-data ID
-  = Variable Identifier
-  -- ^ Name of a variable.
-  | Array Identifier
-  -- ^ Name of an array, we amalgamate those.
-  | RecordField Identifier Identifier
-  -- ^ Name of a record and its field.
-    deriving (Eq, Ord, Show)
 
 -- | An empty data type for instantiating the analysis.
 data RD
 
 type RDResult  = (ID, StateNum, StateNum)
 
--- Not complete
 instance Analysis RD where
   type Result RD = RDResult
   bottomValue = S.empty
   initialValue = S.fromList ([(name, -2, 0) | name <- getAllNames pg])
   stateOrder = forward
-  kill (_, action, _) = case action of
-    DeclAction (VariableDecl x)             -> S.singleton (Variable x)
-    DeclAction (RecordDecl x)               -> S.fromList [RecordField x "fst", RecordField x "snd"]
-    DeclAction (ArrayDecl _ a)              -> S.singleton (Array a)
-    AssignAction (AST.Variable x) _         -> S.singleton (Variable x)
-    AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i')
-    ReadAction (AST.Variable x)             -> S.singleton (Variable x)
-    ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i')
-    _                                       -> S.empty
+  analyze e s = (s S.\\ kill e) `S.union` gen e
 
-  gen (_, action, _) = case action of
-    AssignAction lv rv -> fv'' lv `S.union` fv rv
-    WriteAction rv     -> fv rv
-    BoolAction rv      -> fv rv
-    _                  -> S.empty
+-- Missing record dec: How to refer to a record itself, and not an access?
+kill :: Edge  -> S.Set RDResult
+kill (_, action, _) = case action of
+  DeclAction (VariableDecl x)             -> S.fromList killDefinition Variable x
+  DeclAction (RecordDecl x)               -> S.empty
+  DeclAction (ArrayDecl _ a)              -> S.fromList killDefinition Array x
+  AssignAction (AST.Variable x) _         -> S.fromList killDefinition Variable x
+  AssignAction (AST.FieldAccess i i') _   -> S.fromList killDefinition RecordField i i'
+  ReadAction (AST.Variable x)             -> S.fromList killDefinition Variable x
+  ReadAction (AST.FieldAccess i i')       -> S.fromList killDefinition RecordField i i'
+  _                                       -> S.empty
+  
+gen :: Edge  -> S.Set RDResult
+gen (qs, action, qe) = case action of
+  DeclAction (VariableDecl x)             -> S.singleton (Variable x, qs, qe)
+  DeclAction (RecordDecl x)               -> S.empty
+  DeclAction (ArrayDecl _ a)              -> S.singleton (Array x, qs, qe)
+  AssignAction (AST.Variable x) _         -> S.singleton (Variable x, qs, qe)
+  AssignAction (AST.ArrayIndex _)         -> S.singleton (Array x, qs, qe)
+  AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i', qs, qe)
+  ReadAction (AST.Variable x)             -> S.singleton (Variable x, qs, qe)
+  ReadAction (AST.ArrayIndex _)           -> S.singleton (Array x, qs, qe)
+  ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i', qs, qe)
+  _                                       -> S.empty
 
 
--- TODO
-getAllNames :: PG -> [Identifier]
+-- Missing record dec: How to refer to a record itself, and not an access?
+getAllNames :: PG -> [ID]
 getAllNames [] = []
 getAllNames ((_,action,_):rest) = case action of 
-  DeclAction (VariableDecl x) -> x : getAllNames rest
+  DeclAction (VariableDecl x) -> (Variable x : getAllNames rest)
+  DeclAction (ArrayDecl _ x) -> (Array x : getAllNames rest)
+  DeclAction (RecordDecl x _) ->  []
   _                           -> getAllNames rest
+
+
+killDefinition :: ID -> PG -> [RDResult]
+killDefinition x pg  = (x, -2, 0) : map (\(qs, qe) -> (x,qs,qe)) statePairs
+  where
+  statePairs :: [(StateNum, StateNum)]
+  statePairs = map (\(qs,a,qe) -> (qs,qe)) pg
