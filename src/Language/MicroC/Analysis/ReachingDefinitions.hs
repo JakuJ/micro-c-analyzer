@@ -9,6 +9,7 @@ module Language.MicroC.Analysis.ReachingDefinitions
 ) where
 import           Control.Lens                 ((^..))
 import           Data.Data.Lens               (biplate)
+import           Data.Lattice
 import qualified Data.Set                     as S
 import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
@@ -22,11 +23,10 @@ data RD
 type RDResult  = (ID, StateNum, StateNum)
 
 instance Analysis RD where
-  type Result RD = RDResult
+  type Result RD = Poset RDResult
   direction = Forward
-  bottomValue = S.empty
-  initialValue pg = S.mapMonotonic (,-2, 0) $ getAllNames pg
-  analyze pg e s = (s S.\\ kill e pg) `S.union` gen e
+  initialValue pg = Poset $ S.mapMonotonic (,-2, 0) $ getAllNames pg
+  analyze pg e (Poset s) = Poset $ (s S.\\ kill e pg) `S.union` gen e
 
 -- Missing record dec: How to refer to a record itself, and not an access?
 -- Need to pass PG to analysis and kill/gen

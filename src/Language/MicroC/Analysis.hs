@@ -12,36 +12,30 @@ module Language.MicroC.Analysis
 , def2IDs
 ) where
 
-import           Data.Set                     (Set, isSubsetOf)
 import           Language.MicroC.AST          hiding (LValue (Variable))
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.ProgramGraph (Edge, PG, StateNum)
+import Data.Lattice
+import Data.Set (Set)
 
 data AnalysisDirection = Forward | Backward
   deriving (Eq)
 
 -- | An abstract analysis monad.
 --   Results need to have an instance of `Ord` since we are using `Set`.
-class Ord (Result m) => Analysis m where
+class Lattice (Result m) => Analysis m where
   type Result m
   direction :: AnalysisDirection
   -- ^ The type of the elements of the sets returned by the analysis.
-  bottomValue :: Set (Result m)
-  -- ^ The value assigned as an initial solution to all states but the first at the start of any worklist algorithm.
-  initialValue :: PG -> Set (Result m)
+  initialValue :: PG -> Result m
   -- ^ The value assigned as an initial solution for the first state at the start of any worklist algorithm.
-  constraint :: Set (Result m) -> Set (Result m) -> Bool
-  -- ^ The constraint function, either `isSubsetOf` or `isSupersetOf`.
-  analyze :: PG -> Edge -> Set (Result m) -> Set (Result m)
+  analyze :: PG -> Edge -> Result m -> Result m
   -- ^ An analysis function. For bit-vector frameworks defined as S(edge, X) = (X \ kill(edge)) + gen(edge)
   stateOrder :: Edge -> (StateNum, StateNum)
   -- ^ The order of states in constraints, either `forward` or `backward`.
 
   default direction :: AnalysisDirection
   direction = Forward
-
-  default constraint :: Set (Result m) -> Set (Result m) -> Bool
-  constraint = isSubsetOf
 
   default stateOrder :: Edge -> (StateNum, StateNum)
   stateOrder = case direction @m of

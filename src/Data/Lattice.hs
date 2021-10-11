@@ -1,36 +1,17 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-
 module Data.Lattice where
 
-import qualified Data.Set as S
+import Data.Set
 
-class Ord a => Lattice a where
+class Lattice a where
+  bottom :: a
+  order :: a -> a -> Bool
   supremum :: a -> a -> a
-  infimum :: a -> a -> a
 
-class Lattice a => CompleteLattice a where
-  maxElement :: a
-  minElement :: a
-
-newtype Poset a = Poset (S.Set a)
-  deriving (Eq, Show)
-
-instance Ord a => Ord (Poset a) where
-  Poset a <= Poset b = a `S.isSubsetOf` b
+newtype Poset a = Poset (Set a)
+  deriving (Eq, Show) via Set a
 
 instance Ord a => Lattice (Poset a) where
-  supremum (Poset a) (Poset b) = Poset $ S.union a b
-  infimum (Poset a) (Poset b) = Poset $ S.intersection a b
+  bottom = Poset empty
+  Poset a `order` Poset b = a `isSubsetOf` b
+  supremum (Poset a) (Poset b) = Poset $ a `union` b
 
--- Example of a bounded poset
-
-data Sign = Minus | Zero | Plus
-  deriving (Eq, Ord, Enum, Show)
-
-generateEnumValues :: (Enum a) => [a]
-generateEnumValues = enumFrom (toEnum 0)
-
-instance Bounded (Poset Sign) where
-  minBound = Poset S.empty
-  maxBound = Poset $ S.fromList generateEnumValues

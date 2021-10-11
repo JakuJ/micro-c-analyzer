@@ -6,7 +6,6 @@ module Main (main) where
 
 import           Control.Monad                                (forM_, void)
 import           Control.Monad.IO.Class                       (MonadIO (..))
-import           Data.Foldable                                (toList)
 import qualified Data.Map                                     as M
 import           Language.MicroC.Analysis                     (Analysis (Result))
 import           Language.MicroC.Analysis.IntervalAnalysis    (IA)
@@ -36,7 +35,7 @@ analyseFile path = do
       putStrLn "PG:"
       mapM_ (putStrLn . printEdge) pg
       putStrLn "SOLUTION: "
-      forM_ (M.toList solution) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show (toList lv)
+      forM_ (M.toList solution) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show lv
       putStrLn "Interpreter:"
       void $ runIO (evalProgram ast)
   where

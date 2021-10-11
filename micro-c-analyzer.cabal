@@ -51,6 +51,7 @@ library
       DataKinds
       DefaultSignatures
       DeriveDataTypeable
+      DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
@@ -81,6 +82,7 @@ executable micro-c-analyzer-exe
       DataKinds
       DefaultSignatures
       DeriveDataTypeable
+      DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
@@ -114,6 +116,7 @@ test-suite micro-c-analyzer-test
       DataKinds
       DefaultSignatures
       DeriveDataTypeable
+      DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase

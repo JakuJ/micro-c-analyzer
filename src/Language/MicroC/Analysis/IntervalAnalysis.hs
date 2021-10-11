@@ -4,6 +4,8 @@ module Language.MicroC.Analysis.IntervalAnalysis where
 
 import           Control.Lens                                 hiding (op)
 import           Control.Monad.State.Lazy
+import           Data.Lattice
+import           Data.List                                    (intercalate)
 import qualified Data.Map.Lazy                                as M
 import qualified Data.Set                                     as S
 import           Language.MicroC.AST
@@ -69,6 +71,13 @@ instance Ord Interval where
   Between _ _ <= Bottom      = False
   Between a b <= Between c d = a >= c && b <= d
 
+instance Lattice Interval where
+  bottom = Bottom
+  order = (<=)
+  supremum Bottom x                    = x
+  supremum x Bottom                    = x
+  supremum (Between a b) (Between c d) = Between (min a c) (max b d)
+
 instance Show Interval where
   show Bottom        = "_|_"
   show (Between a b) = "[" <> show a <> ", " <> show b <> "]"
@@ -76,26 +85,31 @@ instance Show Interval where
 -- | An empty data type for instantiating the analysis.
 data IA
 
-instance Analysis IA where
-  type Result IA = (ID, Interval)
-  direction = Forward
-  bottomValue = S.empty
-  constraint (S.toList -> s1) (S.toList -> s2)
-    = flip all s1 $ \(x, rng1) -> flip any s2 $ \(y, rng2) -> x == y && rng1 <= rng2
+newtype Union = Union (M.Map ID (S.Set Interval))
+  deriving (Eq)
 
-  initialValue pg = S.mapMonotonic (, Between NegInf Inf) $ getAllNames pg
-  analyze _ (_, action, _) results = map2set $ execState (evalAction action) (set2map results)
+instance Lattice Union where
+  bottom = Union M.empty
+  (Union m1) `order` (Union m2)
+      = M.foldrWithKey (\k ints acc ->
+          let ints2 = M.findWithDefault S.empty k m2
+          in acc && all (\i -> any (i <=) ints2) ints) True m1
+  supremum (Union a) (Union b) = Union $ M.unionWith S.union a b
+
+instance Show Union where
+  show (Union (M.assocs -> lst))
+    = "[" <> intercalate ", " (map (\(a, b) -> show a <> " -> " <> show b) lst) <> "]"
+
+instance Analysis IA where
+  type Result IA = Union
+  direction = Forward
+  initialValue pg = Union $ M.fromDistinctAscList $ map (, S.singleton (Between NegInf Inf)) $ S.toAscList (getAllNames pg)
+  analyze _ (_, action, _) (Union results) = Union $ M.map S.fromList $ execState (evalAction action) (M.map S.toList results)
 
 -- TODO: Make these not constant
 min', max' :: Int'
 min' = Int (-100)
 max' = Int 100
-
-set2map :: Ord a => S.Set (a, b) -> M.Map a [b]
-set2map = M.fromListWith (++) . map (fmap pure) . S.elems
-
-map2set :: (Ord a, Ord b) => M.Map a [b] -> S.Set (a, b)
-map2set = S.fromList . concatMap (\(a, bs) -> map (a,) bs) . M.assocs
 
 type Eval = State (M.Map ID [Interval])
 

@@ -2,6 +2,7 @@ module Language.MicroC.Analysis.DetectionOfSigns
 ( DS
 ) where
 
+import           Data.Lattice
 import qualified Data.Set                 as S
 import           Language.MicroC.Analysis
 
@@ -13,8 +14,7 @@ data Sign = Minus | Zero | Plus
 data DS
 
 instance Analysis DS where
-  type Result DS = Sign
+  type Result DS = Poset Sign
   direction = Forward
-  bottomValue = S.empty
-  initialValue _ = S.empty
+  initialValue _ = Poset S.empty
   analyze _ _ _ = undefined
