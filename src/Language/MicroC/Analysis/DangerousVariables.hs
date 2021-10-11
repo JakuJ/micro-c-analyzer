@@ -11,50 +11,37 @@ import           Language.MicroC.ProgramGraph
 
 -- | An empty data type for instantiating the analysis.
 data DV
-
+  
 instance Analysis DV where
   type Result DV = ID
   bottomValue = S.empty
-  initialValue = S.empty
+  initialValue pg = S.empty -- TODO: Add all IDs to the initalValue
   stateOrder = forward
   analyze (_, action, _) s = case action of
     DeclAction de -> case de of
-        VariableDecl n  ->
-            let x = Variable n
-            in
-              if S.singleton x `S.intersection` s == S.empty then S.delete x s else s
-        ArrayDecl _ _   -> s
+        VariableDecl n  -> S.delete (Variable n) s
+        ArrayDecl _ n   -> S.delete (Variable n) s
         RecordDecl r fs ->
             let xs = map (RecordField r) fs
             in
-              s S.\\ S.fromList (filter (`S.member` s) xs)
+              s S.\\ S.fromList xs
     AssignAction lv rv -> case lv of
-        AST.Variable n -> 
+        AST.Variable n ->
             let x = Variable n
                 rhs = fv rv
             in
-              if rhs `S.intersection` s == S.empty then S.delete x s else s `S.union` S.singleton x
+              if rhs `S.disjoint` s then S.delete x s else S.insert x s
         ArrayIndex n ix ->
-            let _ = Array n
-                ixfvs = fv ix
-                rhsfvs = fv rv
-                fvs = ixfvs `S.union` rhsfvs
+            let fvs = fv ix `S.union`  fv rv
             in
-               if fvs `S.intersection` s == S.empty then s else s `S.union` S.singleton (Array n)
+               if fvs `S.disjoint` s then s else S.insert (Array n) s
         FieldAccess n field ->
             let x = RecordField n field
-                rhs = fv rv
             in
-               if rhs `S.intersection` s == S.empty then S.delete x s else s `S.union` S.singleton x
+               if fv rv `S.disjoint` s then S.delete x s else S.insert x s
     ReadAction lv -> case lv of
-      AST.Variable n ->
-        let x = Variable n
-        in
-          if S.singleton x `S.intersection` s == S.empty then S.delete x s else s
-      ArrayIndex _ _ -> s
-      FieldAccess n field ->
-        let x = RecordField n field
-        in
-          if S.singleton x `S.intersection` s == S.empty then S.delete x s else s
-    WriteAction r -> s `S.union` fv r
-    BoolAction r -> s `S.union` fv r
+      AST.Variable n      -> S.delete (Variable n) s
+      ArrayIndex _ _      -> s
+      FieldAccess n field -> S.delete (RecordField n field) s
+    WriteAction _ -> s
+    BoolAction _ -> s

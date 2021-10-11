@@ -10,7 +10,7 @@ module Language.MicroC.Analysis
 
 import           Data.Set                     (Set, isSubsetOf)
 import           Language.MicroC.AST          (Identifier)
-import           Language.MicroC.ProgramGraph (Edge, StateNum)
+import           Language.MicroC.ProgramGraph (PG, Edge, StateNum)
 
 -- | An abstract analysis monad.
 --   Results need to have an instance of `Ord` since we are using `Set`.
@@ -19,7 +19,7 @@ class Ord (Result m) => Analysis m where
   -- ^ The type of the elements of the sets returned by the analysis.
   bottomValue :: Set (Result m)
   -- ^ The value assigned as an initial solution to all states but the first at the start of any worklist algorithm.
-  initialValue :: Set (Result m)
+  initialValue :: PG -> Set (Result m)
   -- ^ The value assigned as an initial solution for the first state at the start of any worklist algorithm.
   constraint :: Set (Result m) -> Set (Result m) -> Bool
   -- ^ The constraint function, either `isSubsetOf` or `isSupersetOf`.

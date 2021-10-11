@@ -31,7 +31,6 @@ library
       Grammar.Par
       Grammar.Print
       Grammar.Skel
-      Grammar.Test
       Language.MicroC.Analysis
       Language.MicroC.Analysis.DangerousVariables
       Language.MicroC.Analysis.FaintVariables

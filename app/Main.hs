@@ -11,6 +11,7 @@ import           Language.MicroC.Interpreter             (MonadEval (..),
 import           Language.MicroC.Parser                  (parseProgram)
 import           Language.MicroC.ProgramGraph            (Edge, toPG)
 import           Language.MicroC.Worklist                (roundRobin)
+import Language.MicroC.Analysis.LiveVariables (LV)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -40,4 +41,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile "even"
+main = analyseFile "danger"
