@@ -14,9 +14,9 @@ data FV
 
 instance Analysis FV where
   type Result FV = ID
+  direction = Backward
   bottomValue = S.empty
-  initialValue = S.empty
-  stateOrder = backward
+  initialValue _ = S.empty
   analyze (_, action, _) s = case action of
     DeclAction de -> case de of
       VariableDecl n ->

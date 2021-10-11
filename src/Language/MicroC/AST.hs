@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -27,6 +28,7 @@ module Language.MicroC.AST
 ) where
 
 import           Control.Lens (makePrisms)
+import           Data.Data
 
 -- | Represents a type in the MicroC language.
 data CType
@@ -51,7 +53,7 @@ data Declaration
   | ArrayDecl Int Identifier
   -- | Declaration of a record with a given name.
   | RecordDecl Identifier [Identifier]
-    deriving (Show)
+    deriving (Show, Data)
 
 makePrisms ''Declaration
 
@@ -93,18 +95,19 @@ data LValue (t :: CType) where
 deriving instance Show (LValue t)
 deriving instance Eq (LValue t)
 deriving instance Ord (LValue t)
+deriving instance Data (LValue 'CInt)
 
 -- | Arithmetic operators, including bitwise operations.
 data OpArith = Add | Sub | Mult | Div | Mod | BitAnd | BitOr
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Data)
 
 -- | Relational operators.
 data OpRel = Lt | Gt | Le | Ge | Eq | Neq
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Data)
 
 -- | Boolean operators.
 data OpBool = And | Or
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Data)
 
 -- | A statement is a top-level construct that does not evaluate to a value,
 -- but otherwise advances the control flow of a program.
@@ -131,3 +134,15 @@ type Statements = [Statement]
 -- | Represents a complete MicroC program.
 data Program = Program Declarations Statements
   deriving (Show)
+
+-- MISC. INSTANCES
+
+instance Data (RValue 'CInt) where
+  gunfold _ _ _ = undefined
+  toConstr = undefined
+  dataTypeOf = undefined
+
+instance Data (RValue 'CBool) where
+  gunfold _ _ _ = undefined
+  toConstr = undefined
+  dataTypeOf = undefined

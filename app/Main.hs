@@ -1,17 +1,22 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main (main) where
 
-import           Control.Monad                           (forM_, void)
-import           Control.Monad.IO.Class                  (MonadIO (..))
-import           Data.Foldable                           (toList)
-import qualified Data.Map                                as M
-import           Language.MicroC.Analysis.FaintVariables (FV)
+import           Control.Monad                               (forM_, void)
+import           Control.Monad.IO.Class                      (MonadIO (..))
+import           Data.Foldable                               (toList)
+import qualified Data.Map                                    as M
+import           Language.MicroC.Analysis                    (Analysis (Result))
 import           Language.MicroC.Analysis.DangerousVariables (DV)
-import           Language.MicroC.Interpreter             (MonadEval (..),
-                                                          evalProgram)
-import           Language.MicroC.Parser                  (parseProgram)
-import           Language.MicroC.ProgramGraph            (Edge, toPG)
-import           Language.MicroC.Worklist                (roundRobin)
-import Language.MicroC.Analysis.LiveVariables (LV)
+import           Language.MicroC.Analysis.FaintVariables     (FV)
+import           Language.MicroC.Analysis.LiveVariables      (LV)
+import           Language.MicroC.Interpreter                 (MonadEval (..),
+                                                              evalProgram)
+import           Language.MicroC.Parser                      (parseProgram)
+import           Language.MicroC.ProgramGraph                (Edge, toPG)
+import           Language.MicroC.Worklist                    (roundRobin)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -20,14 +25,14 @@ instance MonadEval IOEval where
   evalRead = liftIO readLn
   evalWrite = IOEval . print
 
-analyseFile :: FilePath -> IO ()
+analyseFile :: forall m. (Analysis m, Show (Result m)) => FilePath -> IO ()
 analyseFile path = do
   prog <- parseProgram $ "sources/" <> path <> ".c"
   case prog of
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do
       let pg = toPG ast
-          solution = roundRobin @DV pg (-1)
+          solution = roundRobin @m pg
       putStrLn "AST:"
       print ast
       putStrLn "PG:"
@@ -41,4 +46,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile "danger"
+main = analyseFile @DV "danger"

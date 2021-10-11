@@ -16,9 +16,9 @@ data LV
 
 instance Analysis LV where
   type Result LV = ID
+  direction = Backward
   bottomValue = S.empty
-  initialValue = S.empty
-  stateOrder = backward
+  initialValue _ = S.empty
   analyze e s = (s S.\\ kill e) `S.union` gen e
 
 kill :: (a, Action, c) -> S.Set ID

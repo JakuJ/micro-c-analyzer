@@ -11,6 +11,7 @@ module Language.MicroC.ProgramGraph
 
 import           Control.Lens
 import           Control.Monad.State.Lazy
+import           Data.Data                (Data)
 import           Data.Map.Lazy            (Map)
 import           Data.Map.Lens            (toMapOf)
 import           Language.MicroC.AST
@@ -25,7 +26,7 @@ data Action
   | ReadAction (LValue 'CInt)
   | WriteAction (RValue 'CInt)
   | BoolAction (RValue 'CBool)
-    deriving (Show)
+    deriving (Show, Data)
 
 -- | An edge between two states is labeled with an action.
 type Edge = (StateNum, Action, StateNum)

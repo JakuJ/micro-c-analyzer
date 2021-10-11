@@ -31,6 +31,7 @@ default-extensions:
 - TypeFamilies
 - TypeFamilyDependencies
 - ViewPatterns
+- DeriveDataTypeable
 
 ghc-options:
   # optimization
