@@ -5,11 +5,13 @@ import           Control.Monad.IO.Class                  (MonadIO (..))
 import           Data.Foldable                           (toList)
 import qualified Data.Map                                as M
 import           Language.MicroC.Analysis.FaintVariables (FV)
+import           Language.MicroC.Analysis.DangerousVariables (DV)
 import           Language.MicroC.Interpreter             (MonadEval (..),
                                                           evalProgram)
 import           Language.MicroC.Parser                  (parseProgram)
 import           Language.MicroC.ProgramGraph            (Edge, toPG)
 import           Language.MicroC.Worklist                (roundRobin)
+import Language.MicroC.Analysis.LiveVariables (LV)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -25,7 +27,7 @@ analyseFile path = do
     Left err  -> putStrLn $ "ERROR :: " <> err
     Right ast -> do
       let pg = toPG ast
-          solution = roundRobin @FV pg (-1)
+          solution = roundRobin @DV pg (-1)
       putStrLn "AST:"
       print ast
       putStrLn "PG:"
@@ -39,4 +41,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile "even"
+main = analyseFile "danger"
