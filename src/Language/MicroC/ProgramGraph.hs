@@ -60,6 +60,7 @@ toPG :: Program -> PG
 toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds)
 
 toPG' :: StateNum -> StateNum ->  Program -> NodeM PG
+toPG' qs qe (Program [] ss) = stmsToPG qs qe ss
 toPG' qs qe (Program ds ss) = do
   -- have declarations end in a state with this temporary number
   let flag = -2

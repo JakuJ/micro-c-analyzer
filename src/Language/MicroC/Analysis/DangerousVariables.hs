@@ -18,7 +18,7 @@ instance Analysis DV where
   type Result DV = ID
   direction = Forward
   bottomValue = S.empty
-  initialValue pg = S.fromList $ getAllNames pg
+  initialValue = getAllNames
   analyze _ (_, action, _) s = case action of
     DeclAction de -> case de of
         VariableDecl n  -> S.delete (Variable n) s

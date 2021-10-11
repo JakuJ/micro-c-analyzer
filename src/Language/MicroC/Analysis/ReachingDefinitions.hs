@@ -25,7 +25,7 @@ instance Analysis RD where
   type Result RD = RDResult
   direction = Forward
   bottomValue = S.empty
-  initialValue pg = S.fromList ([(name, -2, 0) | name <- getAllNames pg])
+  initialValue pg = S.mapMonotonic (,-2, 0) $ getAllNames pg
   analyze pg e s = (s S.\\ kill e pg) `S.union` gen e
 
 -- Missing record dec: How to refer to a record itself, and not an access?
@@ -54,14 +54,14 @@ gen (qs, action, qe) = case action of
   ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i', qs, qe)
   _                                       -> S.empty
 
-
--- Missing record dec: How to refer to a record itself, and not an access?
-getAllNames :: PG -> [ID]
-getAllNames pg = map lval2ID (pg ^.. biplate :: [LValue 'CInt])
-
+getAllNames :: PG -> S.Set ID
+getAllNames pg = S.fromList $ defs ++ usages
+  where
+    usages = map lval2ID (pg ^.. biplate :: [LValue 'CInt])
+    defs = concatMap def2IDs (pg ^.. biplate :: [Declaration])
 
 killDefinition :: ID -> PG -> [RDResult]
-killDefinition x pg  = (x, -2, 0) : map (\(qs, qe) -> (x,qs,qe)) statePairs
+killDefinition x pg = (x, -2, 0) : map (\(qs, qe) -> (x, qs, qe)) statePairs
   where
   statePairs :: [(StateNum, StateNum)]
-  statePairs = map (\(qs, _,qe) -> (qs,qe)) pg
+  statePairs = map (\(qs, _, qe) -> (qs, qe)) pg

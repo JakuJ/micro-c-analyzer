@@ -9,7 +9,7 @@ import           Control.Monad.IO.Class                       (MonadIO (..))
 import           Data.Foldable                                (toList)
 import qualified Data.Map                                     as M
 import           Language.MicroC.Analysis                     (Analysis (Result))
-import           Language.MicroC.Analysis.ReachingDefinitions (RD)
+import           Language.MicroC.Analysis.IntervalAnalysis    (IA)
 import           Language.MicroC.Interpreter                  (MonadEval (..),
                                                                evalProgram)
 import           Language.MicroC.Parser                       (parseProgram)
@@ -44,4 +44,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @RD "even"
+main = analyseFile @IA "intervals"

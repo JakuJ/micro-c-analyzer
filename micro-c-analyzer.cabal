@@ -50,17 +50,18 @@ library
   default-extensions:
       DataKinds
       DefaultSignatures
+      DeriveDataTypeable
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       RankNTypes
       StandaloneDeriving
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-      DeriveDataTypeable
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
       array
@@ -79,17 +80,18 @@ executable micro-c-analyzer-exe
   default-extensions:
       DataKinds
       DefaultSignatures
+      DeriveDataTypeable
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       RankNTypes
       StandaloneDeriving
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-      DeriveDataTypeable
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
@@ -111,17 +113,18 @@ test-suite micro-c-analyzer-test
   default-extensions:
       DataKinds
       DefaultSignatures
+      DeriveDataTypeable
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       RankNTypes
       StandaloneDeriving
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-      DeriveDataTypeable
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array

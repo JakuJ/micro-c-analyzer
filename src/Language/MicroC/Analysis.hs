@@ -9,11 +9,11 @@ module Language.MicroC.Analysis
 , forward
 , backward
 , lval2ID
+, def2IDs
 ) where
 
 import           Data.Set                     (Set, isSubsetOf)
-import           Language.MicroC.AST          (Identifier,
-                                               LValue (ArrayIndex, FieldAccess))
+import           Language.MicroC.AST          hiding (LValue (Variable))
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.ProgramGraph (Edge, PG, StateNum)
 
@@ -69,7 +69,13 @@ instance Show ID where
   show (Array i)         = i
   show (RecordField r f) = r <> "." <> f
 
-lval2ID :: LValue a -> ID
+lval2ID :: AST.LValue a -> ID
 lval2ID (AST.Variable x)  = Variable x
 lval2ID (ArrayIndex n _)  = Array n
 lval2ID (FieldAccess r f) = RecordField r f
+
+def2IDs :: Declaration -> [ID]
+def2IDs = \case
+  VariableDecl name   -> [Variable name]
+  ArrayDecl _ name    -> [Array name]
+  RecordDecl r fields -> map (RecordField r) fields
