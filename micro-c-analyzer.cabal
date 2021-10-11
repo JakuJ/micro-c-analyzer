@@ -35,6 +35,7 @@ library
       Language.MicroC.Analysis.DangerousVariables
       Language.MicroC.Analysis.FaintVariables
       Language.MicroC.Analysis.LiveVariables
+      Language.MicroC.Analysis.ReachingDefinitions
       Language.MicroC.AST
       Language.MicroC.Interpreter
       Language.MicroC.Parser
