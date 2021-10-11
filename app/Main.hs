@@ -4,19 +4,20 @@
 
 module Main (main) where
 
-import           Control.Monad                               (forM_, void)
-import           Control.Monad.IO.Class                      (MonadIO (..))
-import           Data.Foldable                               (toList)
-import qualified Data.Map                                    as M
-import           Language.MicroC.Analysis                    (Analysis (Result))
-import           Language.MicroC.Analysis.DangerousVariables (DV)
-import           Language.MicroC.Analysis.FaintVariables     (FV)
-import           Language.MicroC.Analysis.LiveVariables      (LV)
-import           Language.MicroC.Interpreter                 (MonadEval (..),
-                                                              evalProgram)
-import           Language.MicroC.Parser                      (parseProgram)
-import           Language.MicroC.ProgramGraph                (Edge, toPG)
-import           Language.MicroC.Worklist                    (roundRobin)
+import           Control.Monad                                (forM_, void)
+import           Control.Monad.IO.Class                       (MonadIO (..))
+import           Data.Foldable                                (toList)
+import qualified Data.Map                                     as M
+import           Language.MicroC.Analysis                     (Analysis (Result))
+import           Language.MicroC.Analysis.DangerousVariables  (DV)
+import           Language.MicroC.Analysis.FaintVariables      (FV)
+import           Language.MicroC.Analysis.LiveVariables       (LV)
+import           Language.MicroC.Analysis.ReachingDefinitions (RD)
+import           Language.MicroC.Interpreter                  (MonadEval (..),
+                                                               evalProgram)
+import           Language.MicroC.Parser                       (parseProgram)
+import           Language.MicroC.ProgramGraph                 (Edge, toPG)
+import           Language.MicroC.Worklist                     (roundRobin)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -46,4 +47,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @DV "danger"
+main = analyseFile @RD "even"

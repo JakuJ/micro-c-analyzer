@@ -32,7 +32,7 @@ class Ord (Result m) => Analysis m where
   -- ^ The value assigned as an initial solution for the first state at the start of any worklist algorithm.
   constraint :: Set (Result m) -> Set (Result m) -> Bool
   -- ^ The constraint function, either `isSubsetOf` or `isSupersetOf`.
-  analyze :: Edge -> Set (Result m) -> Set (Result m)
+  analyze :: PG -> Edge -> Set (Result m) -> Set (Result m)
   -- ^ An analysis function. For bit-vector frameworks defined as S(edge, X) = (X \ kill(edge)) + gen(edge)
   stateOrder :: Edge -> (StateNum, StateNum)
   -- ^ The order of states in constraints, either `forward` or `backward`.

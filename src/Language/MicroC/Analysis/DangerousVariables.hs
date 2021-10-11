@@ -10,6 +10,8 @@ import qualified Language.MicroC.AST                    as AST
 import           Language.MicroC.Analysis
 import           Language.MicroC.Analysis.LiveVariables (fv)
 import           Language.MicroC.ProgramGraph
+import           Language.MicroC.Analysis.ReachingDefinitions (getAllNames)
+
 
 -- | An empty data type for instantiating the analysis.
 data DV
@@ -18,8 +20,8 @@ instance Analysis DV where
   type Result DV = ID
   direction = Forward
   bottomValue = S.empty
-  initialValue pg = S.fromList $ map lval2ID (pg ^.. biplate :: [LValue 'CInt])
-  analyze (_, action, _) s = case action of
+  initialValue pg = S.fromList $ getAllNames pg
+  analyze _ (_, action, _) s = case action of
     DeclAction de -> case de of
         VariableDecl n  -> S.delete (Variable n) s
         ArrayDecl _ n   -> S.delete (Variable n) s
