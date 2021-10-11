@@ -19,7 +19,7 @@ instance Analysis LV where
   direction = Backward
   bottomValue = S.empty
   initialValue _ = S.empty
-  analyze e s = (s S.\\ kill e) `S.union` gen e
+  analyze _ e s = (s S.\\ kill e) `S.union` gen e
 
 kill :: (a, Action, c) -> S.Set ID
 kill (_, action, _) = case action of

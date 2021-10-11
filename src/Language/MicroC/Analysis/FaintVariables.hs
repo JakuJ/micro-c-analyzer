@@ -17,7 +17,7 @@ instance Analysis FV where
   direction = Backward
   bottomValue = S.empty
   initialValue _ = S.empty
-  analyze (_, action, _) s = case action of
+  analyze _ (_, action, _) s = case action of
     DeclAction de -> case de of
       VariableDecl n ->
         let x = Variable n
