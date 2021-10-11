@@ -33,7 +33,9 @@ library
       Grammar.Skel
       Language.MicroC.Analysis
       Language.MicroC.Analysis.DangerousVariables
+      Language.MicroC.Analysis.DetectionOfSigns
       Language.MicroC.Analysis.FaintVariables
+      Language.MicroC.Analysis.IntervalAnalysis
       Language.MicroC.Analysis.LiveVariables
       Language.MicroC.Analysis.ReachingDefinitions
       Language.MicroC.AST

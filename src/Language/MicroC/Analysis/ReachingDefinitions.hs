@@ -64,8 +64,4 @@ killDefinition :: ID -> PG -> [RDResult]
 killDefinition x pg  = (x, -2, 0) : map (\(qs, qe) -> (x,qs,qe)) statePairs
   where
   statePairs :: [(StateNum, StateNum)]
-  statePairs = map (\(qs,a,qe) -> (qs,qe)) pg
-
-
-allRecordIDs :: AST.Declaration -> [ID]
-allRecordIDs (RecordDecl r ids) = map (\ i -> RecordField r i) ids
+  statePairs = map (\(qs, _,qe) -> (qs,qe)) pg

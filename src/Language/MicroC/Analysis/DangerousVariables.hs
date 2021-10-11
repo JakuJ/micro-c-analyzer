@@ -2,8 +2,6 @@ module Language.MicroC.Analysis.DangerousVariables
 ( DV
 ) where
 
-import           Control.Lens                           ((^..))
-import           Data.Data.Lens                         (biplate)
 import qualified Data.Set                               as S
 import           Language.MicroC.AST                    hiding (Variable)
 import qualified Language.MicroC.AST                    as AST

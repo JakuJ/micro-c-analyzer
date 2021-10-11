@@ -9,9 +9,6 @@ import           Control.Monad.IO.Class                       (MonadIO (..))
 import           Data.Foldable                                (toList)
 import qualified Data.Map                                     as M
 import           Language.MicroC.Analysis                     (Analysis (Result))
-import           Language.MicroC.Analysis.DangerousVariables  (DV)
-import           Language.MicroC.Analysis.FaintVariables      (FV)
-import           Language.MicroC.Analysis.LiveVariables       (LV)
 import           Language.MicroC.Analysis.ReachingDefinitions (RD)
 import           Language.MicroC.Interpreter                  (MonadEval (..),
                                                                evalProgram)
