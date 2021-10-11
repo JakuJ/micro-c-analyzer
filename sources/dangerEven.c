@@ -1,4 +1,3 @@
-/* input to the program, read from the user */
 int y; /* iterator, initialized to 0 */
 int even; /* output variable */
 
