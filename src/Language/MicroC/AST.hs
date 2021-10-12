@@ -54,7 +54,7 @@ data Declaration
   | ArrayDecl Int Identifier
   -- | Declaration of a record with a given name.
   | RecordDecl Identifier [Identifier]
-    deriving (Eq, Show, Data, Generic)
+    deriving (Eq, Show, Data)
 
 makePrisms ''Declaration
 
@@ -127,7 +127,7 @@ data Statement
   | Read (LValue 'CInt)
   -- | A __write__ statement.
   | Write (RValue 'CInt)
-    deriving (Show, Eq, Ord, Generic)
+    deriving (Show, Eq, Ord)
 
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]

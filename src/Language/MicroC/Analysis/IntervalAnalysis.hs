@@ -4,14 +4,15 @@ module Language.MicroC.Analysis.IntervalAnalysis where
 
 import           Control.Lens                                 hiding (op)
 import           Control.Monad.State.Lazy
-import           Data.Lattice
+import           Data.Lattice                                 (Lattice (..))
 import           Data.List                                    (intercalate)
 import qualified Data.Map.Lazy                                as M
 import qualified Data.Set                                     as S
 import           Language.MicroC.AST
 import           Language.MicroC.Analysis
 import           Language.MicroC.Analysis.ReachingDefinitions (getAllNames)
-import           Language.MicroC.ProgramGraph
+import           Language.MicroC.ID
+import           Language.MicroC.ProgramGraph                 (Action (..))
 
 data Int'
   = NegInf
@@ -29,10 +30,8 @@ instance Num Int' where
   _ + Inf           = Inf
 
   (Int x) * (Int y) = Int $ x * y
-  NegInf * (Int 0)  = undefined
-  (Int 0) * NegInf  = undefined
-  Inf * (Int 0)     = undefined
-  (Int 0) * Inf     = undefined
+  _ * (Int 0)       = Int 0
+  (Int 0) * _       = Int 0
   NegInf * x        = if signum x == -1 then Inf else NegInf
   x * NegInf        = NegInf * x
   Inf * x           = if signum x == -1 then NegInf else Inf

@@ -10,7 +10,8 @@ import qualified Data.Set                     as S
 import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.Analysis
-import           Language.MicroC.ProgramGraph
+import           Language.MicroC.ID           (ID (..))
+import           Language.MicroC.ProgramGraph (Action (..))
 
 -- | An empty data type for instantiating the analysis.
 data LV

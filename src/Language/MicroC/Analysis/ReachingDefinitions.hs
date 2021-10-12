@@ -14,6 +14,7 @@ import qualified Data.Set                     as S
 import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.Analysis
+import           Language.MicroC.ID
 import           Language.MicroC.ProgramGraph
 
 

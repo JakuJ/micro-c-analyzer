@@ -77,3 +77,4 @@ tests:
     - hspec
     - QuickCheck
     - generic-random
+    - silently

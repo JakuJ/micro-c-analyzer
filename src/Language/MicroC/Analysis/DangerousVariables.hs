@@ -2,13 +2,14 @@ module Language.MicroC.Analysis.DangerousVariables
 ( DV
 ) where
 
-import           Data.Lattice
+import           Data.Lattice                                 (Poset (..))
 import qualified Data.Set                                     as S
 import           Language.MicroC.AST                          hiding (Variable)
 import qualified Language.MicroC.AST                          as AST
 import           Language.MicroC.Analysis
 import           Language.MicroC.Analysis.LiveVariables       (fv)
 import           Language.MicroC.Analysis.ReachingDefinitions (getAllNames)
+import           Language.MicroC.ID                           (ID (..))
 import           Language.MicroC.ProgramGraph
 
 

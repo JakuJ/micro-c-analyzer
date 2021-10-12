@@ -76,4 +76,3 @@ instance Arbitrary (RValue 'CBool) where
                 , OpR <$> arbitrary ./ 2  <*> arbitrary <*> arbitrary ./ 2
                 , OpB <$> arbitrary ./ 2  <*> arbitrary <*> arbitrary ./ 2 ]
     branch n base $ base ++ other
-

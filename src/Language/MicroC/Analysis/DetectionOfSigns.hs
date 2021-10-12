@@ -2,7 +2,7 @@ module Language.MicroC.Analysis.DetectionOfSigns
 ( DS
 ) where
 
-import           Data.Lattice
+import           Data.Lattice             (Poset (..))
 import qualified Data.Set                 as S
 import           Language.MicroC.Analysis
 
