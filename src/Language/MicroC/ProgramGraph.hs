@@ -28,7 +28,7 @@ data Action
   | ReadAction (LValue 'CInt)
   | WriteAction (RValue 'CInt)
   | BoolAction (RValue 'CBool)
-    deriving (Show, Data)
+    deriving (Eq, Show, Data)
 
 -- | An edge between two states is labeled with an action.
 type Edge = (StateNum, Action, StateNum)
@@ -65,9 +65,9 @@ getFields r = use $ fields . ix r
 toPG :: Program -> PG
 toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds)
 
-toPG' :: StateNum -> StateNum ->  Program -> NodeM PG
+toPG' :: StateNum -> StateNum -> Program -> NodeM PG
 toPG' qs qe (Program [] ss)  = stmsToPG qs qe ss
-toPG' qs qe (Program [d] []) = decsToPG qs qe [d]
+toPG' qs qe (Program ds [])  = decsToPG qs qe ds
 toPG' qs qe (Program ds ss)  = do
   -- have declarations end in a state with this temporary number
   let flag = -2
@@ -104,26 +104,29 @@ stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
 stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
 
 stmToPG qs qe (RecordAssignment i rs) = do
-  fs <- getFields i
-  states' <- replicateM (length rs - 1) newState
+  fs <- getFields i & fmap (++ repeat "???") -- TODO: undefined behaviour
+  states' <- replicateM (length (zip fs rs) - 1) newState
   let states = qs : states' ++ [qe]
       triples = zip3 fs rs (zip states (tail states))
       mkEdge (f, v, (q1, q2)) = (q1, AssignAction (FieldAccess i f) v, q2)
   pure $ map mkEdge triples
 
 stmToPG qs qe (IfThen (test -> (yes, no)) body) = do
+  rest <- branchThrough qs qe yes body
+  pure $ (qs, no, qe) : rest
+
+stmToPG qs qe (IfThenElse (test -> (yes, no)) body els) =
+  (++) <$> branchThrough qs qe yes body <*> branchThrough qs qe no els
+
+stmToPG qs qe (While (test -> (yes, no)) body) =
+  ((qs, no, qe) :) <$> branchThrough qs qs yes body
+
+branchThrough :: StateNum -> StateNum -> Action -> Statements -> NodeM PG
+branchThrough qs qe branch body = do
   q <- newState
   rest <- stmsToPG q qe body
-  pure $ (qs, yes, q) : (qs, no, qe) : rest
-
-stmToPG qs qe (IfThenElse (test -> (yes, no)) body els) = do
-  qYes <- newState
-  qNo <- newState
-  bodyStms <- stmsToPG qYes qe body
-  elseStms <- stmsToPG qNo qe els
-  pure $ (qs, yes, qYes) : (qs, no, qNo) : bodyStms ++ elseStms
-
-stmToPG qs qe (While (test -> (yes, no)) body) = do
-  q <- newState
-  rest <- stmsToPG q qs body
-  pure $ (qs, yes, q) : (qs, no, qe) : rest
+  case rest of
+    [] -> do
+      nextInt -= 1
+      pure [(qs, branch, qe)]
+    _ -> pure $ (qs, branch, q) : rest

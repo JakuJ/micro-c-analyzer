@@ -7,7 +7,7 @@ import           Language.MicroC.Parser
 import           Test.Hspec
 
 spec :: Spec
-spec = describe "Parses example programs" $ do
+spec = parallel $ describe "Parses example programs" $ do
   forM_ programs $ \program -> do
     it (program <> ".c") $ do
       result <- liftIO $ parseProgram $ "sources/" <> program <> ".c"
