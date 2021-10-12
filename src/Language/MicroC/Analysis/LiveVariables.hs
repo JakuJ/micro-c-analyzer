@@ -5,6 +5,7 @@ module Language.MicroC.Analysis.LiveVariables
 , fv
 ) where
 
+import           Data.Lattice
 import qualified Data.Set                     as S
 import           Language.MicroC.AST          hiding (Variable)
 import qualified Language.MicroC.AST          as AST
@@ -15,11 +16,10 @@ import           Language.MicroC.ProgramGraph
 data LV
 
 instance Analysis LV where
-  type Result LV = ID
+  type Result LV = Poset ID
   direction = Backward
-  bottomValue = S.empty
-  initialValue _ = S.empty
-  analyze _ e s = (s S.\\ kill e) `S.union` gen e
+  initialValue _ = Poset S.empty
+  analyze _ e (Poset s) = Poset $ (s S.\\ kill e) `S.union` gen e
 
 kill :: (a, Action, c) -> S.Set ID
 kill (_, action, _) = case action of

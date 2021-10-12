@@ -2,26 +2,24 @@ module Language.MicroC.Analysis.DangerousVariables
 ( DV
 ) where
 
-import           Control.Lens                           ((^..))
-import           Data.Data.Lens                         (biplate)
-import qualified Data.Set                               as S
-import           Language.MicroC.AST                    hiding (Variable)
-import qualified Language.MicroC.AST                    as AST
+import           Data.Lattice
+import qualified Data.Set                                     as S
+import           Language.MicroC.AST                          hiding (Variable)
+import qualified Language.MicroC.AST                          as AST
 import           Language.MicroC.Analysis
-import           Language.MicroC.Analysis.LiveVariables (fv)
-import           Language.MicroC.ProgramGraph
+import           Language.MicroC.Analysis.LiveVariables       (fv)
 import           Language.MicroC.Analysis.ReachingDefinitions (getAllNames)
+import           Language.MicroC.ProgramGraph
 
 
 -- | An empty data type for instantiating the analysis.
 data DV
 
 instance Analysis DV where
-  type Result DV = ID
+  type Result DV = Poset ID
   direction = Forward
-  bottomValue = S.empty
-  initialValue pg = S.fromList $ getAllNames pg
-  analyze _ (_, action, _) s = case action of
+  initialValue = Poset . getAllNames
+  analyze _ (_, action, _) (Poset s) = Poset $ case action of
     DeclAction de -> case de of
         VariableDecl n  -> S.delete (Variable n) s
         ArrayDecl _ n   -> S.delete (Variable n) s

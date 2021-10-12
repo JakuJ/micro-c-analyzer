@@ -33,7 +33,9 @@ library
       Grammar.Skel
       Language.MicroC.Analysis
       Language.MicroC.Analysis.DangerousVariables
+      Language.MicroC.Analysis.DetectionOfSigns
       Language.MicroC.Analysis.FaintVariables
+      Language.MicroC.Analysis.IntervalAnalysis
       Language.MicroC.Analysis.LiveVariables
       Language.MicroC.Analysis.ReachingDefinitions
       Language.MicroC.AST
@@ -48,17 +50,20 @@ library
   default-extensions:
       DataKinds
       DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       RankNTypes
       StandaloneDeriving
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-      DeriveDataTypeable
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
       array
@@ -77,17 +82,20 @@ executable micro-c-analyzer-exe
   default-extensions:
       DataKinds
       DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       RankNTypes
       StandaloneDeriving
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-      DeriveDataTypeable
   ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
@@ -102,29 +110,37 @@ test-suite micro-c-analyzer-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ArbitraryInstances
       InterpreterSpec
+      ParserSpec
+      ProgGraphSpec
       Paths_micro_c_analyzer
   hs-source-dirs:
       test
   default-extensions:
       DataKinds
       DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       RankNTypes
       StandaloneDeriving
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-      DeriveDataTypeable
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-orphans
   build-depends:
-      array
+      QuickCheck
+    , array
     , base >=4.7 && <5
     , containers
+    , generic-random
     , hspec
     , lens
     , micro-c-analyzer

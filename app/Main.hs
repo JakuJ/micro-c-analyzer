@@ -4,20 +4,16 @@
 
 module Main (main) where
 
-import           Control.Monad                                (forM_, void)
-import           Control.Monad.IO.Class                       (MonadIO (..))
-import           Data.Foldable                                (toList)
-import qualified Data.Map                                     as M
-import           Language.MicroC.Analysis                     (Analysis (Result))
-import           Language.MicroC.Analysis.DangerousVariables  (DV)
-import           Language.MicroC.Analysis.FaintVariables      (FV)
-import           Language.MicroC.Analysis.LiveVariables       (LV)
-import           Language.MicroC.Analysis.ReachingDefinitions (RD)
-import           Language.MicroC.Interpreter                  (MonadEval (..),
-                                                               evalProgram)
-import           Language.MicroC.Parser                       (parseProgram)
-import           Language.MicroC.ProgramGraph                 (Edge, toPG)
-import           Language.MicroC.Worklist                     (roundRobin)
+import           Control.Monad                             (forM_, void)
+import           Control.Monad.IO.Class                    (MonadIO (..))
+import qualified Data.Map                                  as M
+import           Language.MicroC.Analysis                  (Analysis (Result))
+import           Language.MicroC.Analysis.IntervalAnalysis (IA)
+import           Language.MicroC.Interpreter               (MonadEval (..),
+                                                            evalProgram)
+import           Language.MicroC.Parser                    (parseProgram)
+import           Language.MicroC.ProgramGraph              (Edge, toPG)
+import           Language.MicroC.Worklist                  (roundRobin)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -39,7 +35,9 @@ analyseFile path = do
       putStrLn "PG:"
       mapM_ (putStrLn . printEdge) pg
       putStrLn "SOLUTION: "
-      forM_ (M.toList solution) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show (toList lv)
+      case M.toList solution of
+        []      -> print "Program is empty"
+        (h : t) -> forM_ (t ++ [h]) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show lv
       putStrLn "Interpreter:"
       void $ runIO (evalProgram ast)
   where
@@ -47,4 +45,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @RD "even"
+main = analyseFile @IA "even"

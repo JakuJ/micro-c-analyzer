@@ -4,44 +4,37 @@
 
 module Language.MicroC.Analysis
 ( Analysis(..)
-, AnalysisDirection(..)
+, Direction(..)
 , ID(..)
 , forward
 , backward
 , lval2ID
+, def2IDs
 ) where
 
-import           Data.Set                     (Set, isSubsetOf)
-import           Language.MicroC.AST          (Identifier,
-                                               LValue (ArrayIndex, FieldAccess))
+import           Data.Lattice
+import           Language.MicroC.AST          hiding (LValue (Variable))
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.ProgramGraph (Edge, PG, StateNum)
 
-data AnalysisDirection = Forward | Backward
+data Direction = Forward | Backward
   deriving (Eq)
 
--- | An abstract analysis monad.
---   Results need to have an instance of `Ord` since we are using `Set`.
-class Ord (Result m) => Analysis m where
+-- | An abstract analysis monad. Results of the analysis must form a complete 'Lattice'.
+class Lattice (Result m) => Analysis m where
   type Result m
-  direction :: AnalysisDirection
-  -- ^ The type of the elements of the sets returned by the analysis.
-  bottomValue :: Set (Result m)
-  -- ^ The value assigned as an initial solution to all states but the first at the start of any worklist algorithm.
-  initialValue :: PG -> Set (Result m)
+  -- ^ The type of the result of the analysis for a given state in the program graph.
+  direction :: Direction
+  -- ^ Direction of the analysis, either 'Forward' or 'Backward'.
+  initialValue :: PG -> Result m
   -- ^ The value assigned as an initial solution for the first state at the start of any worklist algorithm.
-  constraint :: Set (Result m) -> Set (Result m) -> Bool
-  -- ^ The constraint function, either `isSubsetOf` or `isSupersetOf`.
-  analyze :: PG -> Edge -> Set (Result m) -> Set (Result m)
+  analyze :: PG -> Edge -> Result m -> Result m
   -- ^ An analysis function. For bit-vector frameworks defined as S(edge, X) = (X \ kill(edge)) + gen(edge)
   stateOrder :: Edge -> (StateNum, StateNum)
   -- ^ The order of states in constraints, either `forward` or `backward`.
 
-  default direction :: AnalysisDirection
+  default direction :: Direction
   direction = Forward
-
-  default constraint :: Set (Result m) -> Set (Result m) -> Bool
-  constraint = isSubsetOf
 
   default stateOrder :: Edge -> (StateNum, StateNum)
   stateOrder = case direction @m of
@@ -69,7 +62,13 @@ instance Show ID where
   show (Array i)         = i
   show (RecordField r f) = r <> "." <> f
 
-lval2ID :: LValue a -> ID
+lval2ID :: AST.LValue a -> ID
 lval2ID (AST.Variable x)  = Variable x
 lval2ID (ArrayIndex n _)  = Array n
 lval2ID (FieldAccess r f) = RecordField r f
+
+def2IDs :: Declaration -> [ID]
+def2IDs = \case
+  VariableDecl name   -> [Variable name]
+  ArrayDecl _ name    -> [Array name]
+  RecordDecl r fields -> map (RecordField r) fields

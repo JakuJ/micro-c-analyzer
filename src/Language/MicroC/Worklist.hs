@@ -8,13 +8,14 @@ module Language.MicroC.Worklist
 ) where
 
 import           Control.Monad.State.Lazy
+import           Data.Lattice
 import qualified Data.Map.Lazy                as M
-import qualified Data.Set                     as S
-import           Language.MicroC.Analysis     (AnalysisDirection(..), Analysis (..))
-import           Language.MicroC.ProgramGraph (PG, StateNum)
+import           Data.Set
+import           Language.MicroC.Analysis     (Analysis (..), Direction (..))
+import           Language.MicroC.ProgramGraph (PG, StateNum, allStates)
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
-type Solution m = M.Map StateNum (S.Set (Result m))
+type Solution m = M.Map StateNum (Result m)
 
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
 type WorklistAlgorithm m = Analysis m => PG -> Solution m
@@ -27,10 +28,10 @@ roundRobin pg = execState go M.empty
     go = do
       -- all states except the first one
       let s0 = if direction @m == Forward then 0 else -1
-          qq = states pg S.\\ S.singleton s0
+          qq = allStates pg \\ singleton s0
 
       -- set bottom value to all states
-      forM_ qq $ \s -> modify (M.insert s (bottomValue @m))
+      forM_ qq $ \s -> modify (M.insert s bottom)
 
       -- set initial value to state s0
       modify (M.insert s0 (initialValue @m pg))
@@ -44,20 +45,16 @@ roundRobin pg = execState go M.empty
         aq' <- gets (M.! q')
         -- calculate left side of the constraint
         let leftSide = analyze @m pg e aq
-            satisfied = constraint @m leftSide aq'
+            satisfied = leftSide `order` aq'
         if not satisfied then do
           -- if not satisfied, we set update the solution for state q'
-          modify $ M.insert q' (S.union aq' leftSide)
+          modify $ M.insert q' (supremum aq' leftSide)
           -- and indicate something has changed
           pure True
         else
           pure False
 
 -- HELPER FUNCTIONS
-
--- | Get all states from a list of edges.
-states :: PG -> S.Set StateNum
-states = S.fromList . concatMap (\(q1, _, q2) -> [q1, q2])
 
 -- | Check if any element of a list maps to `True` under a monadic predicate.
 anyM :: Monad m => [a] -> (a -> m Bool) -> m Bool

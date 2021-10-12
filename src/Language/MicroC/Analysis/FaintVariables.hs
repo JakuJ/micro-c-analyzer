@@ -2,6 +2,7 @@ module Language.MicroC.Analysis.FaintVariables
 ( FV
 ) where
 
+import           Data.Lattice
 import qualified Data.Set                               as S
 import           Language.MicroC.AST                    hiding (Variable)
 import qualified Language.MicroC.AST                    as AST
@@ -13,11 +14,10 @@ import           Language.MicroC.ProgramGraph
 data FV
 
 instance Analysis FV where
-  type Result FV = ID
+  type Result FV = Poset ID
   direction = Backward
-  bottomValue = S.empty
-  initialValue _ = S.empty
-  analyze _ (_, action, _) s = case action of
+  initialValue _ = Poset S.empty
+  analyze _ (_, action, _) (Poset s) = Poset $ case action of
     DeclAction de -> case de of
       VariableDecl n ->
         let x = Variable n

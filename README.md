@@ -12,12 +12,11 @@ stack install alex
 stack install happy
 ```
 
-After you install the dependencies, run:
+After you install the dependencies, run any of:
 
 ```shell
-stack build # build
-stack run   # build and execute the program
-stack test  # build and run the test suite
+stack build             # build the project
+stack test [--coverage]   # run the test suite [and generate an HTML report]
 ```
 
 ## Documentation
