@@ -51,6 +51,7 @@ library
       DataKinds
       DefaultSignatures
       DeriveDataTypeable
+      DeriveGeneric
       DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
@@ -82,6 +83,7 @@ executable micro-c-analyzer-exe
       DataKinds
       DefaultSignatures
       DeriveDataTypeable
+      DeriveGeneric
       DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
@@ -108,7 +110,10 @@ test-suite micro-c-analyzer-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Arbitrary
       InterpreterSpec
+      ParserSpec
+      ProgGraphSpec
       Paths_micro_c_analyzer
   hs-source-dirs:
       test
@@ -116,6 +121,7 @@ test-suite micro-c-analyzer-test
       DataKinds
       DefaultSignatures
       DeriveDataTypeable
+      DeriveGeneric
       DerivingVia
       GADTs
       GeneralizedNewtypeDeriving
@@ -128,11 +134,13 @@ test-suite micro-c-analyzer-test
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-orphans
   build-depends:
-      array
+      QuickCheck
+    , array
     , base >=4.7 && <5
     , containers
+    , generic-random
     , hspec
     , lens
     , micro-c-analyzer

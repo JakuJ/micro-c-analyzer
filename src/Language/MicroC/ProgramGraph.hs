@@ -2,11 +2,12 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Language.MicroC.ProgramGraph
-( toPG
+( PG
 , Edge
-, PG
 , StateNum
 , Action(..)
+, toPG
+, allStates
 ) where
 
 import           Control.Lens
@@ -14,6 +15,7 @@ import           Control.Monad.State.Lazy
 import           Data.Data                (Data)
 import           Data.Map.Lazy            (Map)
 import           Data.Map.Lens            (toMapOf)
+import           Data.Set                 (Set, fromList)
 import           Language.MicroC.AST
 
 -- | Different states are represented using integers.
@@ -47,6 +49,10 @@ type NodeM = State Memory
 -- | Traverse over record declarations and make a `Map` from their names to their field names.
 declaredRecords :: Declarations -> Map Identifier [Identifier]
 declaredRecords = toMapOf $ traverse . _RecordDecl . itraversed
+
+-- | Get all states from a list of edges.
+allStates :: PG -> Set StateNum
+allStates = fromList . concatMap (\(q1, _, q2) -> [q1, q2])
 
 -- | Return the nextInt field and then increment it.
 newState :: NodeM StateNum

@@ -22,6 +22,7 @@ default-extensions:
 - DataKinds
 - DefaultSignatures
 - DeriveDataTypeable
+- DeriveGeneric
 - DerivingVia
 - GADTs
 - GeneralizedNewtypeDeriving
@@ -69,6 +70,10 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wno-incomplete-uni-patterns
+    - -Wno-orphans
     dependencies:
     - micro-c-analyzer
     - hspec
+    - QuickCheck
+    - generic-random

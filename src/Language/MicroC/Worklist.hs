@@ -12,7 +12,7 @@ import           Data.Lattice
 import qualified Data.Map.Lazy                as M
 import           Data.Set
 import           Language.MicroC.Analysis     (Analysis (..), Direction (..))
-import           Language.MicroC.ProgramGraph (PG, StateNum)
+import           Language.MicroC.ProgramGraph (PG, StateNum, allStates)
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
 type Solution m = M.Map StateNum (Result m)
@@ -28,7 +28,7 @@ roundRobin pg = execState go M.empty
     go = do
       -- all states except the first one
       let s0 = if direction @m == Forward then 0 else -1
-          qq = states pg \\ singleton s0
+          qq = allStates pg \\ singleton s0
 
       -- set bottom value to all states
       forM_ qq $ \s -> modify (M.insert s bottom)
@@ -55,10 +55,6 @@ roundRobin pg = execState go M.empty
           pure False
 
 -- HELPER FUNCTIONS
-
--- | Get all states from a list of edges.
-states :: PG -> Set StateNum
-states = fromList . concatMap (\(q1, _, q2) -> [q1, q2])
 
 -- | Check if any element of a list maps to `True` under a monadic predicate.
 anyM :: Monad m => [a] -> (a -> m Bool) -> m Bool

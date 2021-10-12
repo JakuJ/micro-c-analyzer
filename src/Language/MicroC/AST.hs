@@ -29,6 +29,7 @@ module Language.MicroC.AST
 
 import           Control.Lens (makePrisms)
 import           Data.Data
+import           GHC.Generics (Generic)
 
 -- | Represents a type in the MicroC language.
 data CType
@@ -53,7 +54,7 @@ data Declaration
   | ArrayDecl Int Identifier
   -- | Declaration of a record with a given name.
   | RecordDecl Identifier [Identifier]
-    deriving (Show, Data)
+    deriving (Eq, Show, Data, Generic)
 
 makePrisms ''Declaration
 
@@ -99,15 +100,15 @@ deriving instance Data (LValue 'CInt)
 
 -- | Arithmetic operators, including bitwise operations.
 data OpArith = Add | Sub | Mult | Div | Mod | BitAnd | BitOr
-  deriving (Show, Eq, Ord, Data)
+  deriving (Show, Eq, Ord, Data, Generic)
 
 -- | Relational operators.
 data OpRel = Lt | Gt | Le | Ge | Eq | Neq
-  deriving (Show, Eq, Ord, Data)
+  deriving (Show, Eq, Ord, Data, Generic)
 
 -- | Boolean operators.
 data OpBool = And | Or
-  deriving (Show, Eq, Ord, Data)
+  deriving (Show, Eq, Ord, Data, Generic)
 
 -- | A statement is a top-level construct that does not evaluate to a value,
 -- but otherwise advances the control flow of a program.
@@ -126,7 +127,7 @@ data Statement
   | Read (LValue 'CInt)
   -- | A __write__ statement.
   | Write (RValue 'CInt)
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
 
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]

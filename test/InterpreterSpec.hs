@@ -1,6 +1,4 @@
-module InterpreterSpec (
-    spec
-) where
+module InterpreterSpec (spec) where
 
 import           Control.Monad.Reader
 import           Control.Monad.Writer.Lazy
