@@ -20,8 +20,7 @@ import           Language.MicroC.ProgramGraph (Edge, PG, StateNum)
 data Direction = Forward | Backward
   deriving (Eq)
 
--- | An abstract analysis monad.
---   Results need to have an instance of `Ord` since we are using `Set`.
+-- | An abstract analysis monad. Results of the analysis must form a complete 'Lattice'.
 class Lattice (Result m) => Analysis m where
   type Result m
   -- ^ The type of the result of the analysis for a given state in the program graph.

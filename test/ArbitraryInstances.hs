@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Arbitrary where
+module ArbitraryInstances () where
 
 import           Generic.Random
 import           Language.MicroC.AST
@@ -13,14 +13,23 @@ branch base go = do
   n <- getSize
   if n <= 1 then oneof base else resize (n - 1) . oneof $ go
 
+identifier :: Gen Identifier
+identifier = (:) <$> letter <*> listOf idChar
+  where
+    letter = oneof [chooseEnum ('a', 'z'), chooseEnum ('A', 'Z')]
+    idChar = oneof [letter, pure '_', chooseEnum ('0', '9')]
+
 instance Arbitrary Declaration where
-  arbitrary = genericArbitrary uniform
+  arbitrary = oneof [ VariableDecl <$> identifier
+                    , ArrayDecl <$> arbitrarySizedNatural <*> identifier
+                    , RecordDecl <$> identifier <*> listOf1 identifier]
 
 instance Arbitrary Statement where
   arbitrary = do
-    r <- genericArbitrary uniform
+    n <- getSize
+    r <- resize (max 0 (n - 1)) $ genericArbitrary uniform
     case r of
-      RecordAssignment x _ -> RecordAssignment x <$> listOf1 arbitrary
+      RecordAssignment _ _ -> RecordAssignment <$> identifier <*> listOf1 arbitrary
       _                    -> pure r
 
 instance Arbitrary OpArith where
@@ -34,8 +43,8 @@ instance Arbitrary OpBool where
 
 instance Arbitrary (LValue 'CInt) where
   arbitrary = do
-    let base = [Variable <$> arbitrary, FieldAccess <$> arbitrary <*> arbitrary]
-    branch base $ (ArrayIndex <$> arbitrary <*> arbitrary) : base
+    let base = [Variable <$> identifier, FieldAccess <$> identifier <*> identifier]
+    branch base $ (ArrayIndex <$> identifier <*> arbitrary) : base
 
 instance Arbitrary (RValue 'CInt) where
   arbitrary = do

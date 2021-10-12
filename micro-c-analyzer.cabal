@@ -110,7 +110,7 @@ test-suite micro-c-analyzer-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Arbitrary
+      ArbitraryInstances
       InterpreterSpec
       ParserSpec
       ProgGraphSpec

@@ -1,6 +1,6 @@
 module ProgGraphSpec (spec) where
 
-import           Arbitrary                    ()
+import           ArbitraryInstances           ()
 import qualified Data.Set                     as S
 import           Language.MicroC.AST
 import           Language.MicroC.ProgramGraph
@@ -20,5 +20,9 @@ spec = describe "Program graph" $ do
       RecordAssignment _ _ -> null
       _                    -> not . null
     -- states should be continuous
-    let states = S.toAscList $ allStates pg
+    let states = S.toList $ allStates pg
     states `shouldBe` [-1 .. length states - 2]
+
+-- IfThenElse (Literal True) [] []
+--        expected: [-1,0,1]
+--         but got: [0,1,2]
