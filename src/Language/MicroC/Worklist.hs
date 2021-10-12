@@ -11,8 +11,7 @@ import           Control.Monad.State.Lazy
 import           Data.Lattice
 import qualified Data.Map.Lazy                as M
 import           Data.Set
-import           Language.MicroC.Analysis     (Analysis (..),
-                                               AnalysisDirection (..))
+import           Language.MicroC.Analysis     (Analysis (..), Direction (..))
 import           Language.MicroC.ProgramGraph (PG, StateNum)
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.

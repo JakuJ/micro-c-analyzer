@@ -4,7 +4,7 @@
 
 module Language.MicroC.Analysis
 ( Analysis(..)
-, AnalysisDirection(..)
+, Direction(..)
 , ID(..)
 , forward
 , backward
@@ -12,21 +12,21 @@ module Language.MicroC.Analysis
 , def2IDs
 ) where
 
+import           Data.Lattice
 import           Language.MicroC.AST          hiding (LValue (Variable))
 import qualified Language.MicroC.AST          as AST
 import           Language.MicroC.ProgramGraph (Edge, PG, StateNum)
-import Data.Lattice
-import Data.Set (Set)
 
-data AnalysisDirection = Forward | Backward
+data Direction = Forward | Backward
   deriving (Eq)
 
 -- | An abstract analysis monad.
 --   Results need to have an instance of `Ord` since we are using `Set`.
 class Lattice (Result m) => Analysis m where
   type Result m
-  direction :: AnalysisDirection
-  -- ^ The type of the elements of the sets returned by the analysis.
+  -- ^ The type of the result of the analysis for a given state in the program graph.
+  direction :: Direction
+  -- ^ Direction of the analysis, either 'Forward' or 'Backward'.
   initialValue :: PG -> Result m
   -- ^ The value assigned as an initial solution for the first state at the start of any worklist algorithm.
   analyze :: PG -> Edge -> Result m -> Result m
@@ -34,7 +34,7 @@ class Lattice (Result m) => Analysis m where
   stateOrder :: Edge -> (StateNum, StateNum)
   -- ^ The order of states in constraints, either `forward` or `backward`.
 
-  default direction :: AnalysisDirection
+  default direction :: Direction
   direction = Forward
 
   default stateOrder :: Edge -> (StateNum, StateNum)

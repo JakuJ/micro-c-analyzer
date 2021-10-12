@@ -1,9 +1,8 @@
-int rand;
-x := 3;
+x := 0;
 
-if (rand == 0) {
-    x := 6;
-    write x;
+
+if (x <= 10) {
+    x := x + 1;
 }
 
 /* x is 3 or 6 */
