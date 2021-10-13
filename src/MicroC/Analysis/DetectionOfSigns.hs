@@ -1,10 +1,10 @@
-module Language.MicroC.Analysis.DetectionOfSigns
+module MicroC.Analysis.DetectionOfSigns
 ( DS
 ) where
 
-import           Data.Lattice             (Poset (..))
-import qualified Data.Set                 as S
-import           Language.MicroC.Analysis
+import           Data.Lattice    (Poset (..))
+import qualified Data.Set        as S
+import           MicroC.Analysis
 
 -- | The type of the sign
 data Sign = Minus | Zero | Plus

@@ -1,10 +1,10 @@
-module Language.MicroC.Parser
+module MicroC.Parser
 ( parseProgram
 ) where
 
-import qualified Grammar.Abs         as A
-import           Grammar.Par         (myLexer, pProgram)
-import qualified Language.MicroC.AST as C
+import qualified Grammar.Abs as A
+import           Grammar.Par (myLexer, pProgram)
+import qualified MicroC.AST  as C
 
 parseProgram :: FilePath -> IO (Either String C.Program)
 parseProgram path = do

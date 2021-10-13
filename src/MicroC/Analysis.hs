@@ -2,15 +2,15 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.MicroC.Analysis
+module MicroC.Analysis
 ( Analysis(..)
 , Direction(..)
 , forward
 , backward
 ) where
 
-import           Data.Lattice                 (Lattice)
-import           Language.MicroC.ProgramGraph (Edge, PG, StateNum)
+import           Data.Lattice        (Lattice)
+import           MicroC.ProgramGraph (Edge, PG, StateNum)
 
 data Direction = Forward | Backward
   deriving (Eq)

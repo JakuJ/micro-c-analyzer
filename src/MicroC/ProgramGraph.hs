@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Language.MicroC.ProgramGraph
+module MicroC.ProgramGraph
 ( PG
 , Edge
 , StateNum
@@ -16,7 +16,7 @@ import           Data.Data                (Data)
 import           Data.Map.Lazy            (Map)
 import           Data.Map.Lens            (toMapOf)
 import           Data.Set                 (Set, fromList)
-import           Language.MicroC.AST
+import           MicroC.AST
 
 -- | Different states are represented using integers.
 type StateNum = Int

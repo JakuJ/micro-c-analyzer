@@ -1,4 +1,4 @@
-module Language.MicroC.Analysis.LiveVariables
+module MicroC.Analysis.LiveVariables
 ( LV
 , kill
 , gen
@@ -6,12 +6,12 @@ module Language.MicroC.Analysis.LiveVariables
 ) where
 
 import           Data.Lattice
-import qualified Data.Set                     as S
-import           Language.MicroC.AST          hiding (Variable)
-import qualified Language.MicroC.AST          as AST
-import           Language.MicroC.Analysis
-import           Language.MicroC.ID           (ID (..))
-import           Language.MicroC.ProgramGraph (Action (..))
+import qualified Data.Set            as S
+import           MicroC.AST          hiding (Variable)
+import qualified MicroC.AST          as AST
+import           MicroC.Analysis
+import           MicroC.ID           (ID (..))
+import           MicroC.ProgramGraph (Action (..))
 
 -- | An empty data type for instantiating the analysis.
 data LV

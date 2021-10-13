@@ -4,7 +4,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | A module containing datatypes defining the structure of the MicroC AST.
-module Language.MicroC.AST
+module MicroC.AST
 ( -- * Type system
   CType(..)
 , TypeRepr
@@ -31,7 +31,7 @@ import           Control.Lens (makePrisms)
 import           Data.Data
 import           GHC.Generics (Generic)
 
--- | Represents a type in the MicroC language.
+-- | Represents a type in the MicroC
 data CType
   -- | The __int__ type.
   = CInt

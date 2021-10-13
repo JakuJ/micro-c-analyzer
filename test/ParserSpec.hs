@@ -3,7 +3,7 @@ module ParserSpec (spec) where
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Either            (isRight)
-import           Language.MicroC.Parser
+import           MicroC.Parser
 import           Test.Hspec
 
 spec :: Spec

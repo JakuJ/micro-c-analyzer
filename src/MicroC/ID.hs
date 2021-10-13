@@ -1,11 +1,11 @@
-module Language.MicroC.ID
+module MicroC.ID
 ( ID(..)
 , lval2ID
 , def2IDs
 ) where
 
-import           Language.MicroC.AST hiding (LValue (Variable))
-import qualified Language.MicroC.AST as AST
+import           MicroC.AST hiding (LValue (Variable))
+import qualified MicroC.AST as AST
 
 -- | Result type for multiple analyses.
 data ID

@@ -4,20 +4,20 @@
 
 module AnalysisSpec (spec) where
 
-import           ArbitraryInstances                           ()
-import           Control.Monad                                (forM_)
-import           Language.MicroC.Analysis                     (Analysis (..))
-import           Language.MicroC.Analysis.DangerousVariables  (DV)
-import           Language.MicroC.Analysis.FaintVariables      (FV)
-import           Language.MicroC.Analysis.IntervalAnalysis    (IA)
-import           Language.MicroC.Analysis.LiveVariables       (LV)
-import           Language.MicroC.Analysis.ReachingDefinitions (RD)
-import           Language.MicroC.Parser                       (parseProgram)
-import           Language.MicroC.ProgramGraph                 (PG, toPG)
-import           Language.MicroC.Worklist                     (roundRobin)
-import           System.IO.Silently                           (silence)
+import           ArbitraryInstances                  ()
+import           Control.Monad                       (forM_)
+import           MicroC.Analysis                     (Analysis (..))
+import           MicroC.Analysis.DangerousVariables  (DV)
+import           MicroC.Analysis.FaintVariables      (FV)
+import           MicroC.Analysis.IntervalAnalysis    (IA)
+import           MicroC.Analysis.LiveVariables       (LV)
+import           MicroC.Analysis.ReachingDefinitions (RD)
+import           MicroC.Parser                       (parseProgram)
+import           MicroC.ProgramGraph                 (PG, toPG)
+import           MicroC.Worklist                     (roundRobin)
+import           System.IO.Silently                  (silence)
 import           Test.Hspec
-import           Test.Hspec.QuickCheck                        (prop)
+import           Test.Hspec.QuickCheck               (prop)
 
 spec :: Spec
 spec = do

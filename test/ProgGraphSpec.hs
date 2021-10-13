@@ -1,14 +1,14 @@
 module ProgGraphSpec (spec) where
 
-import           ArbitraryInstances           ()
+import           ArbitraryInstances    ()
 import           Control.Lens
 import           Control.Monad
-import qualified Data.Set                     as S
-import           Language.MicroC.AST
-import           Language.MicroC.ProgramGraph
+import qualified Data.Set              as S
+import           MicroC.AST
+import           MicroC.ProgramGraph
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
-import           Test.QuickCheck              ()
+import           Test.QuickCheck       ()
 
 spec :: Spec
 spec = parallel $ do

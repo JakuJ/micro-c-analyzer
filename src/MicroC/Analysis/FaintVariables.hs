@@ -1,15 +1,15 @@
-module Language.MicroC.Analysis.FaintVariables
+module MicroC.Analysis.FaintVariables
 ( FV
 ) where
 
-import           Data.Lattice                           (Poset (..))
-import qualified Data.Set                               as S
-import           Language.MicroC.AST                    hiding (Variable)
-import qualified Language.MicroC.AST                    as AST
-import           Language.MicroC.Analysis
-import           Language.MicroC.Analysis.LiveVariables (fv)
-import           Language.MicroC.ID                     (ID (..))
-import           Language.MicroC.ProgramGraph
+import           Data.Lattice                  (Poset (..))
+import qualified Data.Set                      as S
+import           MicroC.AST                    hiding (Variable)
+import qualified MicroC.AST                    as AST
+import           MicroC.Analysis
+import           MicroC.Analysis.LiveVariables (fv)
+import           MicroC.ID                     (ID (..))
+import           MicroC.ProgramGraph
 
 -- | An empty data type for instantiating the analysis.
 data FV
