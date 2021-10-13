@@ -4,13 +4,13 @@
 
 module Main (main) where
 
-import           Control.Monad                             (forM_, void)
-import           Control.Monad.IO.Class                    (MonadIO (..))
-import qualified Data.Map                                  as M
+import           Control.Monad                    (forM_, void)
+import           Control.Monad.IO.Class           (MonadIO (..))
+import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
 import           MicroC.Analysis.IntervalAnalysis (IA)
-import           MicroC.Interpreter               (MonadEval (..),
-                                                            evalProgram)
+import           MicroC.Analysis.LiveVariables    (LV)
+import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseProgram)
 import           MicroC.ProgramGraph              (Edge, toPG)
 import           MicroC.Worklist                  (roundRobin)
@@ -45,4 +45,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @IA "even"
+main = analyseFile @LV "even"

@@ -25,6 +25,7 @@ module MicroC.AST
 , OpBool(..)
  -- * Miscellaneous
 , _RecordDecl
+, _Reference
 ) where
 
 import           Control.Lens (makePrisms)
@@ -127,7 +128,7 @@ data Statement
   | Read (LValue 'CInt)
   -- | A __write__ statement.
   | Write (RValue 'CInt)
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Data)
 
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]
@@ -147,3 +148,7 @@ instance Data (RValue 'CBool) where
   gunfold _ _ _ = undefined
   toConstr = undefined
   dataTypeOf = undefined
+
+-- OPTICS
+
+makePrisms ''RValue

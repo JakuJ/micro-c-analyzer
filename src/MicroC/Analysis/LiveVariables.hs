@@ -5,7 +5,7 @@ module MicroC.Analysis.LiveVariables
 , fv
 ) where
 
-import           Data.Lattice
+import           Data.Lattice        (Poset (..))
 import qualified Data.Set            as S
 import           MicroC.AST          hiding (Variable)
 import qualified MicroC.AST          as AST
@@ -35,10 +35,13 @@ kill (_, action, _) = case action of
 
 gen :: (a, Action, c) -> S.Set ID
 gen (_, action, _) = case action of
-  AssignAction lv rv -> fv'' lv `S.union` fv rv
-  WriteAction rv     -> fv rv
-  BoolAction rv      -> fv rv
-  _                  -> S.empty
+  AssignAction (ArrayIndex _ ix) rv -> fv ix `S.union` fv rv
+  AssignAction _ rv                 -> fv rv
+  WriteAction rv                    -> fv rv
+  ReadAction (ArrayIndex _ ix)      -> fv ix
+  ReadAction _                      -> S.empty
+  BoolAction rv                     -> fv rv
+  DeclAction _                      -> S.empty
 
 fv :: RValue a -> S.Set ID
 fv (Reference lv)  = fv' lv
@@ -46,13 +49,9 @@ fv (OpA rva _ rvb) = fv rva `S.union` fv rvb
 fv (OpR rva _ rvb) = fv rva `S.union` fv rvb
 fv (OpB rva _ rvb) = fv rva `S.union` fv rvb
 fv (Not rv)        = fv rv
-fv _               = S.empty
+fv (Literal _)     = S.empty
 
 fv' :: LValue a -> S.Set ID
 fv' (AST.Variable i)   = S.singleton $ Variable i
-fv' (ArrayIndex i rv)  = S.singleton (Array i) `S.union` fv rv
+fv' (ArrayIndex i rv)  = S.insert (Array i) $ fv rv
 fv' (FieldAccess i i') = S.singleton $ RecordField i i'
-
-fv'' :: LValue a -> S.Set ID
-fv'' (ArrayIndex i rv) = S.singleton (Array i) `S.union` fv rv
-fv'' _                 = S.empty

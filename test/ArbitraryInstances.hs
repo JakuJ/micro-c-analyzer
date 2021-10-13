@@ -6,6 +6,7 @@ module ArbitraryInstances () where
 
 import           Generic.Random
 import           MicroC.AST
+import           MicroC.ProgramGraph
 import           Test.QuickCheck
 
 step :: Int -> Gen a -> Gen a
@@ -76,3 +77,13 @@ instance Arbitrary (RValue 'CBool) where
                 , OpR <$> arbitrary ./ 2  <*> arbitrary <*> arbitrary ./ 2
                 , OpB <$> arbitrary ./ 2  <*> arbitrary <*> arbitrary ./ 2 ]
     branch n base $ base ++ other
+
+instance Arbitrary Action where
+  arbitrary = sized $ \n -> do
+    let base =  [ DeclAction <$> step n arbitrary
+                , AssignAction <$> arbitrary ./ 2 <*> arbitrary ./ 2
+                , ReadAction <$> step n arbitrary
+                , WriteAction <$> step n arbitrary
+                , BoolAction <$> step n arbitrary
+                ]
+    branch n base base
