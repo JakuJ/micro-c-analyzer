@@ -2,20 +2,20 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-module Language.MicroC.Analysis.ReachingDefinitions
+module MicroC.Analysis.ReachingDefinitions
 ( RD
 , RDResult
 , getAllNames
 ) where
-import           Control.Lens                 ((^..))
-import           Data.Data.Lens               (biplate)
+import           Control.Lens        ((^..))
+import           Data.Data.Lens      (biplate)
 import           Data.Lattice
-import qualified Data.Set                     as S
-import           Language.MicroC.AST          hiding (Variable)
-import qualified Language.MicroC.AST          as AST
-import           Language.MicroC.Analysis
-import           Language.MicroC.ID
-import           Language.MicroC.ProgramGraph
+import qualified Data.Set            as S
+import           MicroC.AST          hiding (Variable)
+import qualified MicroC.AST          as AST
+import           MicroC.Analysis
+import           MicroC.ID
+import           MicroC.ProgramGraph
 
 
 -- | An empty data type for instantiating the analysis.

@@ -5,7 +5,7 @@
 module ArbitraryInstances () where
 
 import           Generic.Random
-import           Language.MicroC.AST
+import           MicroC.AST
 import           Test.QuickCheck
 
 step :: Int -> Gen a -> Gen a

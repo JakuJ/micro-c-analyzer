@@ -2,8 +2,8 @@ module InterpreterSpec (spec) where
 
 import           Control.Monad.Reader
 import           Control.Monad.Writer.Lazy
-import           Language.MicroC.AST
-import           Language.MicroC.Interpreter
+import           MicroC.AST
+import           MicroC.Interpreter
 import           Test.Hspec
 
 -- | 'MonadEval' instance for testing.

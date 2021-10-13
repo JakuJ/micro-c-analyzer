@@ -1,18 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Language.MicroC.Analysis.IntervalAnalysis where
+module MicroC.Analysis.IntervalAnalysis where
 
-import           Control.Lens                                 hiding (op)
+import           Control.Lens                        hiding (op)
 import           Control.Monad.State.Lazy
-import           Data.Lattice                                 (Lattice (..))
-import           Data.List                                    (intercalate)
-import qualified Data.Map.Lazy                                as M
-import qualified Data.Set                                     as S
-import           Language.MicroC.AST
-import           Language.MicroC.Analysis
-import           Language.MicroC.Analysis.ReachingDefinitions (getAllNames)
-import           Language.MicroC.ID
-import           Language.MicroC.ProgramGraph                 (Action (..))
+import           Data.Lattice                        (Lattice (..))
+import           Data.List                           (intercalate)
+import qualified Data.Map.Lazy                       as M
+import qualified Data.Set                            as S
+import           MicroC.AST
+import           MicroC.Analysis
+import           MicroC.Analysis.ReachingDefinitions (getAllNames)
+import           MicroC.ID
+import           MicroC.ProgramGraph                 (Action (..))
 
 data Int'
   = NegInf

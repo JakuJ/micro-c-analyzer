@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Language.MicroC.Interpreter
+module MicroC.Interpreter
 ( -- * Types
   Memory
 , MonadEval(..)
@@ -12,7 +12,7 @@ import           Control.Lens             hiding (op)
 import           Control.Monad.State.Lazy
 import           Data.Bits                ((.&.), (.|.))
 import           Data.Map.Lazy            (Map, empty)
-import           Language.MicroC.AST
+import           MicroC.AST
 
 -- | The type of the internal state of the interpreter - a mapping from variable names to their values.
 data Memory = Memory

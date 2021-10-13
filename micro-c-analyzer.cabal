@@ -31,19 +31,19 @@ library
       Grammar.Par
       Grammar.Print
       Grammar.Skel
-      Language.MicroC.Analysis
-      Language.MicroC.Analysis.DangerousVariables
-      Language.MicroC.Analysis.DetectionOfSigns
-      Language.MicroC.Analysis.FaintVariables
-      Language.MicroC.Analysis.IntervalAnalysis
-      Language.MicroC.Analysis.LiveVariables
-      Language.MicroC.Analysis.ReachingDefinitions
-      Language.MicroC.AST
-      Language.MicroC.ID
-      Language.MicroC.Interpreter
-      Language.MicroC.Parser
-      Language.MicroC.ProgramGraph
-      Language.MicroC.Worklist
+      MicroC.Analysis
+      MicroC.Analysis.DangerousVariables
+      MicroC.Analysis.DetectionOfSigns
+      MicroC.Analysis.FaintVariables
+      MicroC.Analysis.IntervalAnalysis
+      MicroC.Analysis.LiveVariables
+      MicroC.Analysis.ReachingDefinitions
+      MicroC.AST
+      MicroC.ID
+      MicroC.Interpreter
+      MicroC.Parser
+      MicroC.ProgramGraph
+      MicroC.Worklist
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:

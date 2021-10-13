@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.MicroC.Worklist
+module MicroC.Worklist
 ( Solution
 , WorklistAlgorithm
 , roundRobin
@@ -9,10 +9,10 @@ module Language.MicroC.Worklist
 
 import           Control.Monad.State.Lazy
 import           Data.Lattice
-import qualified Data.Map.Lazy                as M
+import qualified Data.Map.Lazy            as M
 import           Data.Set
-import           Language.MicroC.Analysis     (Analysis (..), Direction (..))
-import           Language.MicroC.ProgramGraph (PG, StateNum, allStates)
+import           MicroC.Analysis          (Analysis (..), Direction (..))
+import           MicroC.ProgramGraph      (PG, StateNum, allStates)
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
 type Solution m = M.Map StateNum (Result m)

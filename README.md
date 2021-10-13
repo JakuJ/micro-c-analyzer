@@ -1,6 +1,6 @@
 # micro-c-analyzer
 
-This repository contains a program analysis module for the **MicroC** language.
+This repository contains a program analysis module for the **MicroC**
 
 ## Installation
 

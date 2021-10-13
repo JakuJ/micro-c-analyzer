@@ -7,13 +7,13 @@ module Main (main) where
 import           Control.Monad                             (forM_, void)
 import           Control.Monad.IO.Class                    (MonadIO (..))
 import qualified Data.Map                                  as M
-import           Language.MicroC.Analysis                  (Analysis (Result))
-import           Language.MicroC.Analysis.IntervalAnalysis (IA)
-import           Language.MicroC.Interpreter               (MonadEval (..),
+import           MicroC.Analysis                  (Analysis (Result))
+import           MicroC.Analysis.IntervalAnalysis (IA)
+import           MicroC.Interpreter               (MonadEval (..),
                                                             evalProgram)
-import           Language.MicroC.Parser                    (parseProgram)
-import           Language.MicroC.ProgramGraph              (Edge, toPG)
-import           Language.MicroC.Worklist                  (roundRobin)
+import           MicroC.Parser                    (parseProgram)
+import           MicroC.ProgramGraph              (Edge, toPG)
+import           MicroC.Worklist                  (roundRobin)
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
