@@ -8,9 +8,9 @@ module MicroC.Worklist
 ) where
 
 import           Control.Monad.State.Lazy
-import           Data.Lattice
+import           Data.Lattice             (Lattice (bottom, order, supremum))
 import qualified Data.Map.Lazy            as M
-import           Data.Set
+import           Data.Set                 (singleton, (\\))
 import           MicroC.Analysis          (Analysis (..), Direction (..))
 import           MicroC.ProgramGraph      (PG, StateNum, allStates)
 
@@ -22,37 +22,34 @@ type WorklistAlgorithm m = Analysis m => PG -> Solution m
 
 -- | An implementation of the Round Robin worklist algorithm.
 roundRobin :: forall m. WorklistAlgorithm m
-roundRobin pg = execState go M.empty
-  where
-    go :: State (Solution m) ()
-    go = do
-      -- all states except the first one
-      let s0 = if direction @m == Forward then 0 else -1
-          qq = allStates pg \\ singleton s0
+roundRobin pg = flip execState M.empty $ do
+  -- all states except the first one
+  let s0 = if direction @m == Forward then 0 else -1
+      qq = allStates pg \\ singleton s0
 
-      -- set bottom value to all states
-      forM_ qq $ \s -> modify (M.insert s bottom)
+  -- set bottom value to all states
+  forM_ qq $ \s -> modify (M.insert s bottom)
 
-      -- set initial value to state s0
-      modify (M.insert s0 (initialValue @m pg))
+  -- set initial value to state s0
+  modify (M.insert s0 (initialValue @m pg))
 
-      -- iterate until False is returned for every element
-      whileM $ anyM pg $ \e -> do
-        -- get order of states (reversed for backward problems)
-        let (q, q') = stateOrder @m e
-        -- get current solution for q and q'
-        aq <- gets (M.! q)
-        aq' <- gets (M.! q')
-        -- calculate left side of the constraint
-        let leftSide = analyze @m pg e aq
-            satisfied = leftSide `order` aq'
-        if not satisfied then do
-          -- if not satisfied, we set update the solution for state q'
-          modify $ M.insert q' (supremum aq' leftSide)
-          -- and indicate something has changed
-          pure True
-        else
-          pure False
+  -- iterate until False is returned for every element
+  whileM $ anyM pg $ \e -> do
+    -- get order of states (reversed for backward problems)
+    let (q, q') = stateOrder @m e
+    -- get current solution for q and q'
+    aq <- gets (M.! q)
+    aq' <- gets (M.! q')
+    -- calculate left side of the constraint
+    let leftSide = analyze @m pg e aq
+        satisfied = leftSide `order` aq'
+    if not satisfied then do
+      -- if not satisfied, we set update the solution for state q'
+      modify $ M.insert q' (supremum aq' leftSide)
+      -- and indicate something has changed
+      pure True
+    else
+      pure False
 
 -- HELPER FUNCTIONS
 
