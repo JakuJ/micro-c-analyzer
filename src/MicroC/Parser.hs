@@ -1,16 +1,17 @@
 module MicroC.Parser
-( parseProgram
+( parseFile
+, parseProgram
 ) where
 
 import qualified Grammar.Abs as A
 import           Grammar.Par (myLexer, pProgram)
 import qualified MicroC.AST  as C
 
-parseProgram :: FilePath -> IO (Either String C.Program)
-parseProgram path = do
-  contents <- readFile path
-  let lexemes = myLexer contents
-  return $ tProgram <$> pProgram lexemes
+parseFile :: FilePath -> IO (Either String C.Program)
+parseFile = fmap parseProgram . readFile
+
+parseProgram :: String -> Either String C.Program
+parseProgram = fmap tProgram . pProgram . myLexer
 
 tProgram :: A.Program -> C.Program
 tProgram (A.Program decls stats) = C.Program (map tDecl decls) (map tStat stats)

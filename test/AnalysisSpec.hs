@@ -12,7 +12,7 @@ import           MicroC.Analysis.FaintVariables      (FV)
 import           MicroC.Analysis.IntervalAnalysis    (IA)
 import           MicroC.Analysis.LiveVariables       (LV)
 import           MicroC.Analysis.ReachingDefinitions (RD)
-import           MicroC.Parser                       (parseProgram)
+import           MicroC.Parser                       (parseFile)
 import           MicroC.ProgramGraph                 (PG, toPG)
 import           MicroC.Worklist                     (roundRobin)
 import           System.IO.Silently                  (silence)
@@ -35,11 +35,12 @@ testAnalysis graphs name = describe name $ do
       let solution = roundRobin @m pg
       silence (print solution) `shouldReturn` ()
   prop "terminates on arbitrary programs" $ \prog -> do
-    let solution = roundRobin @m $ toPG prog
+    let Right pg = toPG prog
+        solution = roundRobin @m pg
     silence (print solution) `shouldReturn` ()
 
 programs :: [String]
 programs = ["danger", "even", "factorial", "faint", "fibonacci", "ifte", "intervals", "precedence", "records"]
 
 pgs :: IO [PG]
-pgs = map (\(Right a) -> toPG a) <$> mapM (\p -> parseProgram $ "sources/" <> p <> ".c") programs
+pgs = map (\(Right a) -> let Right pg = toPG a in pg) <$> mapM (\p -> parseFile $ "sources/" <> p <> ".c") programs

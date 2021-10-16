@@ -4,31 +4,30 @@ module MicroC.ID
 , def2IDs
 ) where
 
-import           MicroC.AST hiding (LValue (Variable))
-import qualified MicroC.AST as AST
+import           MicroC.AST
 
 -- | Result type for multiple analyses.
 data ID
-  = Variable Identifier
+  = VariableID Identifier
   -- ^ Name of a variable.
-  | Array Identifier
+  | ArrayID Identifier
   -- ^ Name of an array, we amalgamate those.
-  | RecordField Identifier Identifier
+  | FieldID Identifier Identifier
   -- ^ Name of a record and its field.
     deriving (Eq, Ord)
 
 instance Show ID where
-  show (Variable i)      = i
-  show (Array i)         = i
-  show (RecordField r f) = r <> "." <> f
+  show (VariableID i) = i
+  show (ArrayID i)    = i
+  show (FieldID r f)  = r <> "." <> f
 
-lval2ID :: AST.LValue a -> ID
-lval2ID (AST.Variable x)  = Variable x
-lval2ID (ArrayIndex n _)  = Array n
-lval2ID (FieldAccess r f) = RecordField r f
+lval2ID :: LValue a -> ID
+lval2ID (Variable x)      = VariableID x
+lval2ID (ArrayIndex n _)  = ArrayID n
+lval2ID (FieldAccess r f) = FieldID r f
 
 def2IDs :: Declaration -> [ID]
 def2IDs = \case
-  VariableDecl name   -> [Variable name]
-  ArrayDecl _ name    -> [Array name]
-  RecordDecl r fields -> map (RecordField r) fields
+  VariableDecl name   -> [VariableID name]
+  ArrayDecl _ name    -> [ArrayID name]
+  RecordDecl r fields -> map (FieldID r) fields

@@ -17,6 +17,7 @@ dependencies:
 - containers
 - lens
 - mtl
+- string-interpolate
 
 default-extensions:
 - DataKinds
@@ -35,6 +36,7 @@ default-extensions:
 - TypeFamilies
 - TypeFamilyDependencies
 - ViewPatterns
+- QuasiQuotes
 
 ghc-options:
   # optimization

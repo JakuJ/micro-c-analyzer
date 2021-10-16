@@ -57,8 +57,6 @@ data Declaration
   | RecordDecl Identifier [Identifier]
     deriving (Eq, Show, Data)
 
-makePrisms ''Declaration
-
 -- | A type alias for declarations. Leaves room to change the list to a recursive datatype if need be.
 type Declarations = [Declaration]
 
@@ -137,18 +135,57 @@ type Statements = [Statement]
 data Program = Program Declarations Statements
   deriving (Show)
 
--- MISC. INSTANCES
+-- Data.Data Instances
 
 instance Data (RValue 'CInt) where
-  gunfold _ _ _ = undefined
-  toConstr = undefined
-  dataTypeOf = undefined
+  gunfold k z c = case constrIndex c of
+                        1 -> k $ z Reference
+                        2 -> k $ z Literal
+                        3 -> k $ k $ k $ z OpA
+                        _ -> error "MicroC.AST :: gunfold"
+
+  gfoldl k z (Reference a) = z Reference `k` a
+  gfoldl k z (Literal a)   = z Literal `k` a
+  gfoldl k z (OpA a b c)   = z OpA `k` a `k` b `k` c
+
+  toConstr (Reference _) = conRef
+  toConstr (Literal _)   = conLit
+  toConstr OpA {}        = conOpA
+
+  dataTypeOf _ = tRValue
 
 instance Data (RValue 'CBool) where
-  gunfold _ _ _ = undefined
-  toConstr = undefined
-  dataTypeOf = undefined
+  gunfold k z c = case constrIndex c of
+                        2 -> k $ z Literal
+                        4 -> k $ k $ k $ z OpR
+                        5 -> k $ k $ k $ z OpB
+                        6 -> k $ z Not
+                        _ -> error "MicroC.AST :: gunfold"
+
+  gfoldl k z (Literal a) = z Literal `k` a
+  gfoldl k z (OpR a b c) = z OpR `k` a `k` b `k` c
+  gfoldl k z (OpB a b c) = z OpB `k` a `k` b `k` c
+  gfoldl k z (Not a)     = z Not `k` a
+
+  toConstr (Literal _) = conLit
+  toConstr OpR {}      = conOpR
+  toConstr OpB {}      = conOpB
+  toConstr (Not _)     = conNot
+
+  dataTypeOf _ = tRValue
+
+conRef, conLit, conOpA, conOpR, conOpB, conNot :: Constr
+conRef = mkConstr tRValue "Reference" [] Prefix
+conLit = mkConstr tRValue "Literal" [] Prefix
+conOpA = mkConstr tRValue "OpA" [] Prefix
+conOpR = mkConstr tRValue "OpR" [] Prefix
+conOpB = mkConstr tRValue "OpB" [] Prefix
+conNot = mkConstr tRValue "Not" [] Prefix
+
+tRValue :: DataType
+tRValue = mkDataType "MicroC.AST.RValue" [conRef, conLit, conOpA, conOpR, conOpB, conNot]
 
 -- OPTICS
 
+makePrisms ''Declaration
 makePrisms ''RValue

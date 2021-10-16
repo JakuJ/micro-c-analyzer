@@ -6,16 +6,19 @@ module MicroC.ProgramGraph
 , Edge
 , StateNum
 , Action(..)
+, Diagnostics
 , toPG
 , allStates
 ) where
 
 import           Control.Lens
 import           Control.Monad.State.Lazy
-import           Data.Data                (Data)
-import           Data.Map.Lazy            (Map)
-import           Data.Map.Lens            (toMapOf)
-import           Data.Set                 (Set, fromList)
+import           Control.Monad.Writer.Lazy
+import           Data.Data                 (Data)
+import           Data.Map.Lazy             (Map)
+import           Data.Map.Lens             (toMapOf)
+import           Data.Set                  (Set, fromList)
+import           Data.String.Interpolate   (i)
 import           MicroC.AST
 
 -- | Different states are represented using integers.
@@ -43,8 +46,11 @@ data Memory = Memory
 
 makeLenses ''Memory
 
+-- | A type for a collection of diagnostic messages.
+type Diagnostics = [String]
+
 -- | The monad used for constructing the program graph.
-type NodeM = State Memory
+type NodeM = StateT Memory (Writer Diagnostics)
 
 -- | Traverse over record declarations and make a `Map` from their names to their field names.
 declaredRecords :: Declarations -> Map Identifier [Identifier]
@@ -62,8 +68,11 @@ newState = nextInt <<+= 1
 getFields :: Identifier -> NodeM [Identifier]
 getFields r = use $ fields . ix r
 
-toPG :: Program -> PG
-toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds)
+toPG :: Program -> Either Diagnostics PG
+toPG p@(Program ds _) =
+  case runWriter $ evalStateT (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds) of
+    (pg, [])  -> Right pg
+    (_, errs) -> Left errs
 
 toPG' :: StateNum -> StateNum -> Program -> NodeM PG
 toPG' qs qe (Program [] ss)  = stmsToPG qs qe ss
@@ -103,12 +112,15 @@ stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
 stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
 
-stmToPG qs qe (RecordAssignment i rs) = do
-  fs <- getFields i & fmap (++ repeat "???") -- TODO: undefined behaviour
-  states' <- replicateM (length (zip fs rs) - 1) newState
+stmToPG qs qe (RecordAssignment r vals) = do
+  fs <- getFields r
+  let lfs = length fs
+      lrs = length vals
+  when (lfs /= lrs) . lift . tell . pure $ [i|Couldn't assign #{lrs} values to record #{r}, which has #{lfs} fields|]
+  states' <- replicateM (length (zip fs vals) - 1) newState
   let states = qs : states' ++ [qe]
-      triples = zip3 fs rs (zip states (tail states))
-      mkEdge (f, v, (q1, q2)) = (q1, AssignAction (FieldAccess i f) v, q2)
+      triples = zip3 fs vals (zip states (tail states))
+      mkEdge (f, v, (q1, q2)) = (q1, AssignAction (FieldAccess r f) v, q2)
   pure $ map mkEdge triples
 
 stmToPG qs qe (IfThen (test -> (yes, no)) body) = do

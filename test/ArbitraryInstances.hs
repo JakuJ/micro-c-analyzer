@@ -36,12 +36,12 @@ instance Arbitrary Declaration where
 instance Arbitrary Statement where
   arbitrary = sized $ \n ->
     let other = [ Assignment <$> arbitrary ./ 2 <*> arbitrary ./ 2
-                , RecordAssignment <$> identifier <*> listOf1' arbitrary
                 , IfThen <$> step n arbitrary <*> listOf' arbitrary
                 , IfThenElse <$> step n arbitrary <*> listOf' arbitrary <*> listOf' arbitrary
                 , While <$> step n arbitrary <*> listOf' arbitrary
                 , Read <$> step n arbitrary
                 , Write <$> step n arbitrary]
+                -- Note: We cannot really use RecordAssignment without defining the record first
     in branch n [Read <$> step n arbitrary] other
 
 instance Arbitrary OpArith where

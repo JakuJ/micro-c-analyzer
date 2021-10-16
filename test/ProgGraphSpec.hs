@@ -13,10 +13,10 @@ import           Test.QuickCheck       ()
 spec :: Spec
 spec = parallel $ do
   describe "unit" $ do
-    it "empty program" $ toPG (Program [] []) `shouldSatisfy` null
-    forM_ testCases $ \(msg, pg, ex) ->
+    it "empty program" $ let Right pg = toPG (Program [] []) in pg `shouldSatisfy` null
+    forM_ testCases $ \(msg, Right pg, ex) ->
       it msg $ do
-        wellFormed pg
+        wellFormed $ Right pg
         pg `shouldBe` ex
 
   describe "properties" $ do
@@ -27,13 +27,13 @@ spec = parallel $ do
     prop "well-formed programs" $ \prog@(Program ds ss) -> do
       unless (null ds && null ss) . wellFormed . toPG $ prog
 
-wellFormed :: PG -> Expectation
-wellFormed pg = do
+wellFormed :: Either a PG -> Expectation
+wellFormed (Right pg) = do
   let states = S.toList $ allStates pg
   pg `shouldSatisfy` not . null
   states `shouldBe` [-1 .. length states - 2]
 
-testCases :: [(String, PG, PG)]
+testCases :: [(String, Either Diagnostics PG, PG)]
 testCases = cases & traverse . _2 %~ toPG
   where
     x = Variable "x"

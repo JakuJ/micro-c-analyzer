@@ -1,16 +1,17 @@
 module ParserSpec (spec) where
 
-import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
-import           Data.Either            (isRight)
-import           MicroC.Parser
+import           Control.Monad           (forM_)
+import           Control.Monad.IO.Class  (liftIO)
+import           Data.Either             (isRight)
+import           Data.String.Interpolate (i)
+import           MicroC.Parser           (parseFile)
 import           Test.Hspec
 
 spec :: Spec
 spec = parallel $ describe "Parses example programs" $ do
   forM_ programs $ \program -> do
     it (program <> ".c") $ do
-      result <- liftIO $ parseProgram $ "sources/" <> program <> ".c"
+      result <- liftIO $ parseFile [i|sources/#{program}.c|]
       result `shouldSatisfy` isRight
 
 programs :: [String]
