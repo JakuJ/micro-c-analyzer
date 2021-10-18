@@ -3,10 +3,10 @@ module ProgGraphSpec (spec) where
 import           ArbitraryInstances    ()
 import           Control.Lens
 import           Control.Monad         (forM_, unless)
-import           Data.Either           (fromRight, isLeft, isRight)
+import           Data.Either           (isRight)
 import qualified Data.Set              as S
 import           MicroC.AST
-import           MicroC.Parser         (parseProgram)
+import           MicroC.Parser         (Diagnostics, parseProgram)
 import           MicroC.ProgramGraph
 import           Test.Hspec
 import           Test.Hspec.QuickCheck (prop)
@@ -15,19 +15,13 @@ import           Test.QuickCheck       (discard)
 spec :: Spec
 spec = parallel $ do
   describe "unit" $ do
-    it "empty program" $ let Right pg = toPG (Program [] []) in pg `shouldSatisfy` null
-    forM_ testCases $ \(msg, Right pg, ex) ->
+    it "empty program" $ toPG (Program [] []) `shouldSatisfy` null
+    forM_ testCases $ \(msg, epg, ex) ->
       it msg $ do
-        wellFormed $ Right pg
+        let (Right pg) = epg
+        epg `shouldSatisfy` isRight
+        wellFormed pg
         pg `shouldBe` ex
-    it "assignment to undefined record" $ do
-      let prog = "R := (1, 2);"
-          Right ast = parseProgram prog
-      toPG ast `shouldSatisfy` isLeft
-    it "assignment to undefined record field" $ do
-      let prog = "R.fst := 42;"
-          Right ast = parseProgram prog
-      toPG ast `shouldSatisfy` isLeft
 
   describe "properties" $ do
     prop "well-formed declarations" $ \ds -> do
@@ -37,16 +31,14 @@ spec = parallel $ do
         then discard
         else wellFormed . toPG $ prog
 
-wellFormed :: Either Diagnostics PG -> Expectation
-wellFormed rpg = do
-  rpg `shouldSatisfy` isRight
-  let Right pg = rpg
-      states = S.toList $ allStates pg
+wellFormed :: PG -> Expectation
+wellFormed pg = do
+  let states = S.toList $ allStates pg
   pg `shouldSatisfy` not . null
   states `shouldBe` [-1 .. length states - 2]
 
 testCases :: [(String, Either Diagnostics PG, PG)]
-testCases = cases & traverse . _2 %~ toPG . fromRight undefined . parseProgram
+testCases = cases & traverse . _2 %~ fmap toPG . parseProgram
   where
     x = Variable "x"
     cases = [ ("assignment"

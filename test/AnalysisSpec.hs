@@ -36,14 +36,12 @@ testAnalysis graphs name = describe name $ do
       let solution = roundRobin @m pg
       silence (print solution) `shouldReturn` ()
   prop "terminates on arbitrary programs" $ \prog -> do
-    let epg = toPG prog
-        Right pg = epg
+    let pg = toPG prog
         solution = roundRobin @m pg
-    epg `shouldSatisfy` isRight
     silence (print solution) `shouldReturn` ()
 
 programs :: [String]
 programs = ["danger", "even", "factorial", "faint", "fibonacci", "ifte", "intervals", "precedence", "records"]
 
 pgs :: IO [PG]
-pgs = map (\(Right a) -> let Right pg = toPG a in pg) <$> mapM (\p -> parseFile $ "sources/" <> p <> ".c") programs
+pgs = map (\(Right a) -> toPG a) <$> mapM (\p -> parseFile $ "sources/" <> p <> ".c") programs

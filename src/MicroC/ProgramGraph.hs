@@ -6,7 +6,6 @@ module MicroC.ProgramGraph
 , Edge
 , StateNum
 , Action(..)
-, Diagnostics
 , toPG
 , allStates
 , declaredRecords
@@ -14,14 +13,10 @@ module MicroC.ProgramGraph
 
 import           Control.Lens
 import           Control.Monad.State.Lazy
-import           Control.Monad.Writer.Lazy
-import           Data.Data                 (Data)
-import           Data.List                 (find)
-import           Data.Map.Lazy             (Map)
-import           Data.Map.Lens             (toMapOf)
-import           Data.Maybe                (isNothing)
-import           Data.Set                  (Set, fromList)
-import           Data.String.Interpolate   (i)
+import           Data.Data                (Data)
+import           Data.Map.Lazy            (Map)
+import           Data.Map.Lens            (toMapOf)
+import           Data.Set                 (Set, fromList)
 import           MicroC.AST
 
 -- | Different states are represented using integers.
@@ -49,11 +44,8 @@ data Memory = Memory
 
 makeLenses ''Memory
 
--- | A type for a collection of diagnostic messages.
-type Diagnostics = [String]
-
 -- | The monad used for constructing the program graph.
-type NodeM = StateT Memory (Writer Diagnostics)
+type NodeM = State Memory
 
 -- | Traverse over record declarations and make a `Map` from their names to their field names.
 declaredRecords :: Declarations -> Map Identifier [Identifier]
@@ -71,11 +63,8 @@ newState = nextInt <<+= 1
 getFields :: Identifier -> NodeM [Identifier]
 getFields r = use $ fields . ix r
 
-toPG :: Program -> Either Diagnostics PG
-toPG p@(Program ds _) =
-  case runWriter $ evalStateT (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds) of
-    (pg, [])  -> Right pg
-    (_, errs) -> Left errs
+toPG :: Program -> PG
+toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds)
 
 toPG' :: StateNum -> StateNum -> Program -> NodeM PG
 toPG' qs qe (Program [] ss)  = stmsToPG qs qe ss
@@ -110,27 +99,13 @@ stmsToPG qs qe (s : ss) = do
 test :: RValue 'CBool -> (Action, Action)
 test v = (v, Not v) & each %~ BoolAction
 
--- | Add an error message to the log.
-report :: String -> NodeM ()
-report = lift . tell . pure
-
 stmToPG :: StateNum -> StateNum -> Statement -> NodeM PG
 stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
-stmToPG qs qe (Assignment l r) = do
-  case l of
-    FieldAccess s str -> do
-      fs <- use (fields . at s)
-      when (isNothing $ find (==str) =<< fs) $
-        report [i|Record #{s} does not have a field named #{str}|]
-    _ -> pure ()
-  pure [(qs, AssignAction l r, qe)]
+stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
 
 stmToPG qs qe (RecordAssignment r vals) = do
   fs <- getFields r
-  let lfs = length fs
-      lrs = length vals
-  when (lfs /= lrs) $ report [i|Couldn't assign #{lrs} values to record #{r}, which has #{lfs} fields|]
   states' <- replicateM (length (zip fs vals) - 1) newState
   let states = qs : states' ++ [qe]
       triples = zip3 fs vals (zip states (tail states))

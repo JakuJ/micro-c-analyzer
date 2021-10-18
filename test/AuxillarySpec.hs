@@ -12,7 +12,7 @@ spec = parallel $ do
     it "getAllNames" $ do
       let source = "int x; {int fst; int snd; int trd} R; {int real; int imag} C; int[32] arr; y := C.real; R := (A2[3], x + z, 2); if (k <= f && k != f) {}"
           Right prog = parseProgram source
-          Right pg = toPG prog
+          pg = toPG prog
 
       getAllNames pg `shouldBe` fromList  [ VariableID "x"
                                           , FieldID "R" "fst"

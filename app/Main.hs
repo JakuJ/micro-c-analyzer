@@ -26,22 +26,20 @@ analyseFile :: forall m. (Analysis m, Show (Result m)) => FilePath -> IO ()
 analyseFile path = do
   prog <- parseFile $ "sources/" <> path <> ".c"
   case prog of
-    Left err  -> putStrLn $ "ERROR :: " <> err
-    Right ast ->
-      case toPG ast of
-        Left errs -> mapM_ putStrLn errs
-        Right pg  -> do
-          let solution = roundRobin @m pg
-          putStrLn "AST:"
-          print ast
-          putStrLn "PG:"
-          mapM_ (putStrLn . printEdge) pg
-          putStrLn "SOLUTION: "
-          case M.toList solution of
-            []      -> print "Program is empty"
-            (h : t) -> forM_ (t ++ [h]) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show lv
-          putStrLn "Interpreter:"
-          void $ runIO (evalProgram ast)
+    Left errs -> mapM_ putStrLn errs
+    Right ast -> do
+      let pg = toPG ast
+          solution = roundRobin @m pg
+      putStrLn "AST:"
+      print ast
+      putStrLn "PG:"
+      mapM_ (putStrLn . printEdge) pg
+      putStrLn "SOLUTION: "
+      case M.toList solution of
+        []      -> print "Program is empty"
+        (h : t) -> forM_ (t ++ [h]) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show lv
+      putStrLn "Interpreter:"
+      void $ runIO (evalProgram ast)
   where
     printEdge :: Edge -> String
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
