@@ -42,16 +42,18 @@ checkFieldAccesses :: M.Map Identifier [Identifier] -> Statements -> Writer Diag
 checkFieldAccesses recs ss = do
   let fields = ss ^.. biplate @_ @(LValue 'CInt) . _FieldAccess
   forM_ fields $ \(r, f) -> do
-    unless (M.member r recs) $ report [i|Undefined record: #{r}|]
-    unless (f `elem` recs M.! r) $ report [i|Record #{r} does not define a field named #{f}|]
+    if M.member r recs
+      then unless (f `elem` recs M.! r) $ report [i|Record #{r} does not define a field named #{f}|]
+      else report [i|Undefined record: #{r}|]
 
 checkAssignments :: M.Map Identifier [Identifier] -> Statements -> Writer Diagnostics ()
 checkAssignments recs ss = do
   let rass = concatMap universe ss ^.. traverse . _RecordAssignment <&> fmap length
   forM_ rass $ \(r, l) -> do
-    unless (M.member r recs) $ report [i|Undefined record: #{r}|]
     let fs = length $ recs M.! r
-    when (l /= fs) $ report [i|Trying to assign #{l} values to record #{r} which was defined with #{fs} fields.|]
+    if M.member r recs
+      then when (l /= fs) $ report [i|Trying to assign #{l} values to record #{r} which was defined with #{fs} fields.|]
+      else report [i|Undefined record: #{r}|]
 
 -- TRANSLATION
 
