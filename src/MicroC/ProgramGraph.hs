@@ -9,14 +9,17 @@ module MicroC.ProgramGraph
 , Diagnostics
 , toPG
 , allStates
+, declaredRecords
 ) where
 
 import           Control.Lens
 import           Control.Monad.State.Lazy
 import           Control.Monad.Writer.Lazy
 import           Data.Data                 (Data)
+import           Data.List                 (find)
 import           Data.Map.Lazy             (Map)
 import           Data.Map.Lens             (toMapOf)
+import           Data.Maybe                (isNothing)
 import           Data.Set                  (Set, fromList)
 import           Data.String.Interpolate   (i)
 import           MicroC.AST
@@ -107,16 +110,27 @@ stmsToPG qs qe (s : ss) = do
 test :: RValue 'CBool -> (Action, Action)
 test v = (v, Not v) & each %~ BoolAction
 
+-- | Add an error message to the log.
+report :: String -> NodeM ()
+report = lift . tell . pure
+
 stmToPG :: StateNum -> StateNum -> Statement -> NodeM PG
 stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
-stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
+stmToPG qs qe (Assignment l r) = do
+  case l of
+    FieldAccess s str -> do
+      fs <- use (fields . at s)
+      when (isNothing $ find (==str) =<< fs) $
+        report [i|Record #{s} does not have a field named #{str}|]
+    _ -> pure ()
+  pure [(qs, AssignAction l r, qe)]
 
 stmToPG qs qe (RecordAssignment r vals) = do
   fs <- getFields r
   let lfs = length fs
       lrs = length vals
-  when (lfs /= lrs) . lift . tell . pure $ [i|Couldn't assign #{lrs} values to record #{r}, which has #{lfs} fields|]
+  when (lfs /= lrs) $ report [i|Couldn't assign #{lrs} values to record #{r}, which has #{lfs} fields|]
   states' <- replicateM (length (zip fs vals) - 1) newState
   let states = qs : states' ++ [qe]
       triples = zip3 fs vals (zip states (tail states))

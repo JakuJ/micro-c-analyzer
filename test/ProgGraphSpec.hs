@@ -2,13 +2,15 @@ module ProgGraphSpec (spec) where
 
 import           ArbitraryInstances    ()
 import           Control.Lens
-import           Control.Monad
+import           Control.Monad         (forM_, unless)
+import           Data.Either           (fromRight, isLeft, isRight)
 import qualified Data.Set              as S
 import           MicroC.AST
+import           MicroC.Parser         (parseProgram)
 import           MicroC.ProgramGraph
 import           Test.Hspec
-import           Test.Hspec.QuickCheck
-import           Test.QuickCheck       ()
+import           Test.Hspec.QuickCheck (prop)
+import           Test.QuickCheck       (discard)
 
 spec :: Spec
 spec = parallel $ do
@@ -18,68 +20,78 @@ spec = parallel $ do
       it msg $ do
         wellFormed $ Right pg
         pg `shouldBe` ex
+    it "assignment to undefined record" $ do
+      let prog = "R := (1, 2);"
+          Right ast = parseProgram prog
+      toPG ast `shouldSatisfy` isLeft
+    it "assignment to undefined record field" $ do
+      let prog = "R.fst := 42;"
+          Right ast = parseProgram prog
+      toPG ast `shouldSatisfy` isLeft
 
   describe "properties" $ do
     prop "well-formed declarations" $ \ds -> do
       unless (null ds) . wellFormed . toPG $ Program ds []
-    prop "well-formed statements" $ \ss -> do
-      unless (null ss) . wellFormed . toPG $ Program [] ss
     prop "well-formed programs" $ \prog@(Program ds ss) -> do
-      unless (null ds && null ss) . wellFormed . toPG $ prog
+      if null ds && null ss
+        then discard
+        else wellFormed . toPG $ prog
 
-wellFormed :: Either a PG -> Expectation
-wellFormed (Right pg) = do
-  let states = S.toList $ allStates pg
+wellFormed :: Either Diagnostics PG -> Expectation
+wellFormed rpg = do
+  rpg `shouldSatisfy` isRight
+  let Right pg = rpg
+      states = S.toList $ allStates pg
   pg `shouldSatisfy` not . null
   states `shouldBe` [-1 .. length states - 2]
 
 testCases :: [(String, Either Diagnostics PG, PG)]
-testCases = cases & traverse . _2 %~ toPG
+testCases = cases & traverse . _2 %~ toPG . fromRight undefined . parseProgram
   where
     x = Variable "x"
     cases = [ ("assignment"
-              , Program [] [Assignment x (Literal 5)]
+              , "x := 5;"
               , [(0, AssignAction x (Literal 5), -1)])
             , ("record assignment"
-              , Program [RecordDecl "x" ["fst", "snd"]] [RecordAssignment "x" [Literal 1, Literal 2]]
+              , "{int fst; int snd} x; x := (1,2);"
               , [ (0, DeclAction (RecordDecl "x" ["fst", "snd"]), 1)
                 , (1, AssignAction (FieldAccess "x" "fst") (Literal 1), 2)
                 , (2, AssignAction (FieldAccess "x" "snd") (Literal 2), -1)])
             , ("empty if-then"
-              , Program [] [IfThen (Literal True) []]
+              , "if (true) {}"
               , [ (0, BoolAction (Not (Literal True)), -1)
                 , (0, BoolAction (Literal True), -1)])
             , ("if-then"
-              , Program [] [IfThen (Literal True) [Read x]]
+              , "if (true) {read x;}"
               , [ (0, BoolAction (Not (Literal True)), -1)
                 , (0, BoolAction (Literal True), 1)
                 , (1, ReadAction x, -1)])
             , ("if-then-else w/o then"
-              , Program [] [IfThenElse (Literal True) [] [Read x]]
+              , "if (true) {} else {read x;}"
               , [ (0, BoolAction (Literal True), -1)
                 , (0, BoolAction (Not (Literal True)), 1)
                 , (1, ReadAction x, -1)])
             , ("if-then-else w/o else"
-              , Program [] [IfThenElse (Literal True) [Read x] []]
+              , "if (true) {read x;} else {}"
               , [ (0, BoolAction (Literal True), 1)
                 , (1, ReadAction x, -1)
                 , (0, BoolAction (Not (Literal True)), -1)])
             , ("empty if-then-else"
-              , Program [] [IfThenElse (Literal True) [] []]
+              , "if (true) {} else {}"
               , [ (0, BoolAction (Literal True), -1)
                 , (0, BoolAction (Not (Literal True)), -1)])
             , ("if-then-else"
-              , Program [] [IfThenElse (Literal True) [Read x] [Write (Literal 4)]]
+              , "if (true) {read x;} else {write 4;}"
               , [ (0, BoolAction (Literal True), 1)
                 , (1, ReadAction x, -1)
                 , (0, BoolAction (Not (Literal True)), 2)
                 , (2, WriteAction (Literal 4), -1)])
             , ("empty while"
-              , Program [] [While (Literal True) []]
+              , "while (true) {}"
               , [ (0, BoolAction (Not (Literal True)), -1)
                 , (0, BoolAction (Literal True), 0)])
             , ("while"
-              , Program [] [While (Literal True) [Read x]]
+              , "while (true) {read x;}"
               , [ (0, BoolAction (Not (Literal True)), -1)
                 , (0, BoolAction (Literal True), 1)
                 , (1, ReadAction x, 0)])

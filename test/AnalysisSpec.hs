@@ -6,6 +6,7 @@ module AnalysisSpec (spec) where
 
 import           ArbitraryInstances                  ()
 import           Control.Monad                       (forM_)
+import           Data.Either                         (isRight)
 import           MicroC.Analysis                     (Analysis (..))
 import           MicroC.Analysis.DangerousVariables  (DV)
 import           MicroC.Analysis.FaintVariables      (FV)
@@ -35,8 +36,10 @@ testAnalysis graphs name = describe name $ do
       let solution = roundRobin @m pg
       silence (print solution) `shouldReturn` ()
   prop "terminates on arbitrary programs" $ \prog -> do
-    let Right pg = toPG prog
+    let epg = toPG prog
+        Right pg = epg
         solution = roundRobin @m pg
+    epg `shouldSatisfy` isRight
     silence (print solution) `shouldReturn` ()
 
 programs :: [String]

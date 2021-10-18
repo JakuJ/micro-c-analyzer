@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TemplateHaskell      #-}
@@ -23,12 +24,13 @@ module MicroC.AST
 , OpArith(..)
 , OpRel(..)
 , OpBool(..)
- -- * Miscellaneous
+ -- * Optics
 , _RecordDecl
-, _Reference
+, _RecordAssignment
+, _FieldAccess
 ) where
 
-import           Control.Lens (makePrisms)
+import           Control.Lens (Plated, makePrisms)
 import           Data.Data
 import           GHC.Generics (Generic)
 
@@ -128,6 +130,8 @@ data Statement
   | Write (RValue 'CInt)
     deriving (Show, Eq, Ord, Data)
 
+deriving instance Plated Statement
+
 -- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
 type Statements = [Statement]
 
@@ -188,4 +192,5 @@ tRValue = mkDataType "MicroC.AST.RValue" [conRef, conLit, conOpA, conOpR, conOpB
 -- OPTICS
 
 makePrisms ''Declaration
-makePrisms ''RValue
+makePrisms ''Statement
+makePrisms ''LValue
