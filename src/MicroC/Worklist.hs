@@ -8,7 +8,7 @@ module MicroC.Worklist
 ) where
 
 import           Control.Monad.State.Lazy
-import           Data.Lattice             (Lattice (bottom, order, supremum))
+import           Data.Lattice             (SemiLattice (..))
 import qualified Data.Map.Lazy            as M
 import           Data.Set                 (singleton, (\\))
 import           MicroC.Analysis          (Analysis (..), Direction (..))

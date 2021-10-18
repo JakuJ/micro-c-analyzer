@@ -58,6 +58,7 @@ library
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
+      MultiWayIf
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -92,6 +93,7 @@ executable micro-c-analyzer-exe
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
+      MultiWayIf
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -118,7 +120,9 @@ test-suite micro-c-analyzer-test
       AnalysisSpec
       ArbitraryInstances
       AuxillarySpec
+      Common
       InterpreterSpec
+      IntervalSpec
       ParserSpec
       ProgGraphSpec
       Paths_micro_c_analyzer
@@ -134,6 +138,7 @@ test-suite micro-c-analyzer-test
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
+      MultiWayIf
       RankNTypes
       StandaloneDeriving
       TupleSections

@@ -9,14 +9,14 @@ module MicroC.Analysis
 , backward
 ) where
 
-import           Data.Lattice        (Lattice)
+import           Data.Lattice        (SemiLattice)
 import           MicroC.ProgramGraph (Edge, PG, StateNum)
 
 data Direction = Forward | Backward
   deriving (Eq)
 
--- | An abstract analysis monad. Results of the analysis must form a complete 'Lattice'.
-class Lattice (Result m) => Analysis m where
+-- | An abstract analysis monad. Results of the analysis must form a 'SemiLattice'.
+class SemiLattice (Result m) => Analysis m where
   type Result m
   -- ^ The type of the result of the analysis for a given state in the program graph.
   direction :: Direction

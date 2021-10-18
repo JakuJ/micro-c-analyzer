@@ -1,5 +1,6 @@
 module ParserSpec (spec) where
 
+import           Common                  (programs)
 import           Control.Monad           (forM_)
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Either             (isLeft, isRight)
@@ -19,5 +20,3 @@ spec = parallel $ do
         result <- liftIO $ parseFile [i|sources/#{program}.c|]
         result `shouldSatisfy` isRight
 
-programs :: [String]
-programs = ["danger", "even", "factorial", "faint", "fibonacci", "ifte", "intervals", "precedence", "records"]

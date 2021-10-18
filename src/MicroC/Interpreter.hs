@@ -2,7 +2,7 @@
 
 module MicroC.Interpreter
 ( -- * Types
-  Memory
+  ProgramMemory
 , MonadEval(..)
   -- * Functions
 , evalProgram
@@ -14,9 +14,12 @@ import           Data.Bits                ((.&.), (.|.))
 import           Data.Map.Lazy            (Map, empty)
 import           MicroC.AST
 
+-- | The type used to represent the runtime memory of the program.
+type ProgramMemory = Map (LValue 'CInt) Int
+
 -- | The type of the internal state of the interpreter - a mapping from variable names to their values.
 data Memory = Memory
-  { _memory :: Map (LValue 'CInt) Int
+  { _memory :: ProgramMemory
   -- ^ The memory, maps L-Values to their runtime values. Arrays are represented with `ArrayIndex` and a `Literal` index.
   , _fields :: Map Identifier [Identifier]
   -- ^ A mapping from record names to lists of their field names.
@@ -49,9 +52,9 @@ class Monad m => MonadEval m where
 type Env m x = StateT Memory m x
 
 -- | Interprets a 'Program' and returns the computation in some 'MonadEval'.
--- This can be then executes resulting in the state of the 'Memory' after program completion.
-evalProgram :: MonadEval m => Program -> m Memory
-evalProgram (Program decls stats) = execStateT (evalDecls decls >> evalStats stats) (Memory empty empty)
+-- This can be then executes resulting in the state of the 'ProgramMemory' after program completion.
+evalProgram :: MonadEval m => Program -> m ProgramMemory
+evalProgram (Program decls stats) = _memory <$> execStateT (evalDecls decls >> evalStats stats) (Memory empty empty)
 
 -- Helper functions
 evalStats :: MonadEval m => Statements -> Env m ()

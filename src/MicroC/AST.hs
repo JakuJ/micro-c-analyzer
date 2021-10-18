@@ -26,6 +26,7 @@ module MicroC.AST
 , OpBool(..)
  -- * Optics
 , _RecordDecl
+, _ArrayDecl
 , _RecordAssignment
 , _FieldAccess
 ) where

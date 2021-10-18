@@ -9,6 +9,7 @@ module MicroC.ProgramGraph
 , toPG
 , allStates
 , declaredRecords
+, _DeclAction
 ) where
 
 import           Control.Lens
@@ -30,6 +31,8 @@ data Action
   | WriteAction (RValue 'CInt)
   | BoolAction (RValue 'CBool)
     deriving (Eq, Show, Data)
+
+makePrisms ''Action
 
 -- | An edge between two states is labeled with an action.
 type Edge = (StateNum, Action, StateNum)

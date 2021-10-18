@@ -9,7 +9,6 @@ import           Control.Monad.IO.Class           (MonadIO (..))
 import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
 import           MicroC.Analysis.IntervalAnalysis (IA)
-import           MicroC.Analysis.LiveVariables    (LV)
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
@@ -45,4 +44,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @LV "even"
+main = analyseFile @IA "arr_range"

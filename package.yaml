@@ -29,6 +29,7 @@ default-extensions:
 - GeneralizedNewtypeDeriving
 - LambdaCase
 - MultiParamTypeClasses
+- MultiWayIf
 - RankNTypes
 - StandaloneDeriving
 - TupleSections
