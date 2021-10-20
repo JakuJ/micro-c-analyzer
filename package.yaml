@@ -17,6 +17,7 @@ dependencies:
 - containers
 - lens
 - mtl
+- string-interpolate
 
 default-extensions:
 - DataKinds
@@ -28,6 +29,7 @@ default-extensions:
 - GeneralizedNewtypeDeriving
 - LambdaCase
 - MultiParamTypeClasses
+- MultiWayIf
 - RankNTypes
 - StandaloneDeriving
 - TupleSections
@@ -35,8 +37,13 @@ default-extensions:
 - TypeFamilies
 - TypeFamilyDependencies
 - ViewPatterns
+- QuasiQuotes
 
 ghc-options:
+  # profiling
+  - -eventlog
+  - -fprof-auto
+  - -fno-prof-count-entries
   # optimization
   - -flate-dmd-anal
   - -flate-specialise

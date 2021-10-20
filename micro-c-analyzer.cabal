@@ -58,6 +58,7 @@ library
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
+      MultiWayIf
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -65,13 +66,15 @@ library
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+      QuasiQuotes
+  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
       array
     , base >=4.7 && <5
     , containers
     , lens
     , mtl
+    , string-interpolate
   default-language: Haskell2010
 
 executable micro-c-analyzer-exe
@@ -90,6 +93,7 @@ executable micro-c-analyzer-exe
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
+      MultiWayIf
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -97,7 +101,8 @@ executable micro-c-analyzer-exe
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
+      QuasiQuotes
+  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
     , base >=4.7 && <5
@@ -105,6 +110,7 @@ executable micro-c-analyzer-exe
     , lens
     , micro-c-analyzer
     , mtl
+    , string-interpolate
   default-language: Haskell2010
 
 test-suite micro-c-analyzer-test
@@ -113,7 +119,10 @@ test-suite micro-c-analyzer-test
   other-modules:
       AnalysisSpec
       ArbitraryInstances
+      AuxillarySpec
+      Common
       InterpreterSpec
+      IntervalSpec
       ParserSpec
       ProgGraphSpec
       Paths_micro_c_analyzer
@@ -129,6 +138,7 @@ test-suite micro-c-analyzer-test
       GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
+      MultiWayIf
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -136,7 +146,8 @@ test-suite micro-c-analyzer-test
       TypeFamilies
       TypeFamilyDependencies
       ViewPatterns
-  ghc-options: -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-orphans
+      QuasiQuotes
+  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-orphans
   build-depends:
       QuickCheck
     , array
@@ -148,4 +159,5 @@ test-suite micro-c-analyzer-test
     , micro-c-analyzer
     , mtl
     , silently
+    , string-interpolate
   default-language: Haskell2010

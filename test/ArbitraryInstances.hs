@@ -4,8 +4,15 @@
 
 module ArbitraryInstances () where
 
+import           Control.Lens
+import           Control.Monad       (replicateM)
+import           Data.Data.Lens      (biplate)
+import           Data.List           (nub)
+import qualified Data.Map.Lazy       as M
+import           Data.Maybe          (fromMaybe)
 import           Generic.Random
 import           MicroC.AST
+import           MicroC.ProgramGraph
 import           Test.QuickCheck
 
 step :: Int -> Gen a -> Gen a
@@ -24,8 +31,24 @@ identifier = (:) <$> letter <*> listOf idChar
     idChar = oneof [letter, pure '_', chooseEnum ('0', '9')]
 
 instance Arbitrary Program where
-  shrink (Program ds ss) = [Program ds' ss' | (ds', ss') <- shrink (ds, ss)]
-  arbitrary = Program <$> listOf' arbitrary <*> listOf' arbitrary
+  arbitrary = do
+    ss <- listOf' arbitrary
+    ds <- listOf' arbitrary
+
+    -- find existing record declarations
+    let m1 = declaredRecords ds
+    -- fill in the missing record declarations based on field accesses
+        accs = M.fromListWith (\a b -> nub (a ++ b)) $ map (fmap pure) $ ss ^.. biplate @_ @(LValue 'CInt) . _FieldAccess
+        m2 = M.unionWith (\a b -> nub (a ++ b)) m1 accs
+    -- fill in the missing record declarations based on record assignments
+        rass = map (fmap length) $ concatMap universe ss ^.. traverse . _RecordAssignment
+        m3 = foldr (\(r, n) m -> M.alter (\v -> Just $ take n $ fromMaybe [] v ++ repeat "???") r m) m2 rass
+    -- filter out all record declarations
+        ds' = filter (isn't _RecordDecl) ds
+    -- and add all based on what we need (m3)
+        ds'' = ds' ++ map (uncurry RecordDecl) (M.toList m3)
+
+    pure $ Program ds'' ss
 
 instance Arbitrary Declaration where
   arbitrary = oneof [ VariableDecl <$> identifier
@@ -35,7 +58,7 @@ instance Arbitrary Declaration where
 instance Arbitrary Statement where
   arbitrary = sized $ \n ->
     let other = [ Assignment <$> arbitrary ./ 2 <*> arbitrary ./ 2
-                , RecordAssignment <$> identifier <*> listOf1' arbitrary
+                , RecordAssignment <$> identifier <*> replicateM 3 (arbitrary ./ 3) -- always 3 fields for the sake of simplicity
                 , IfThen <$> step n arbitrary <*> listOf' arbitrary
                 , IfThenElse <$> step n arbitrary <*> listOf' arbitrary <*> listOf' arbitrary
                 , While <$> step n arbitrary <*> listOf' arbitrary
@@ -76,3 +99,13 @@ instance Arbitrary (RValue 'CBool) where
                 , OpR <$> arbitrary ./ 2  <*> arbitrary <*> arbitrary ./ 2
                 , OpB <$> arbitrary ./ 2  <*> arbitrary <*> arbitrary ./ 2 ]
     branch n base $ base ++ other
+
+instance Arbitrary Action where
+  arbitrary = sized $ \n -> do
+    let base =  [ DeclAction <$> step n arbitrary
+                , AssignAction <$> arbitrary ./ 2 <*> arbitrary ./ 2
+                , ReadAction <$> step n arbitrary
+                , WriteAction <$> step n arbitrary
+                , BoolAction <$> step n arbitrary
+                ]
+    branch n base base

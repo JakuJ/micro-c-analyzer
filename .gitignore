@@ -2,3 +2,12 @@
 *~
 Grammar/
 src/Grammar/
+# Profiling
+.hpc/
+*.eventlog
+*.prof
+*.hp
+*.ps
+*.aux
+*.prof.html
+*.svg

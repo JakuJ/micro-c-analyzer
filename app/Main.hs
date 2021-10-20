@@ -4,14 +4,13 @@
 
 module Main (main) where
 
-import           Control.Monad                             (forM_, void)
-import           Control.Monad.IO.Class                    (MonadIO (..))
-import qualified Data.Map                                  as M
+import           Control.Monad                    (forM_, void)
+import           Control.Monad.IO.Class           (MonadIO (..))
+import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
 import           MicroC.Analysis.IntervalAnalysis (IA)
-import           MicroC.Interpreter               (MonadEval (..),
-                                                            evalProgram)
-import           MicroC.Parser                    (parseProgram)
+import           MicroC.Interpreter               (MonadEval (..), evalProgram)
+import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
 import           MicroC.Worklist                  (roundRobin)
 
@@ -24,9 +23,9 @@ instance MonadEval IOEval where
 
 analyseFile :: forall m. (Analysis m, Show (Result m)) => FilePath -> IO ()
 analyseFile path = do
-  prog <- parseProgram $ "sources/" <> path <> ".c"
+  prog <- parseFile $ "sources/" <> path <> ".c"
   case prog of
-    Left err  -> putStrLn $ "ERROR :: " <> err
+    Left errs -> mapM_ putStrLn errs
     Right ast -> do
       let pg = toPG ast
           solution = roundRobin @m pg
@@ -45,4 +44,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @IA "even"
+main = analyseFile @IA "monte_carlo"

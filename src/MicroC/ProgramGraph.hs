@@ -8,6 +8,8 @@ module MicroC.ProgramGraph
 , Action(..)
 , toPG
 , allStates
+, declaredRecords
+, _DeclAction
 ) where
 
 import           Control.Lens
@@ -29,6 +31,8 @@ data Action
   | WriteAction (RValue 'CInt)
   | BoolAction (RValue 'CBool)
     deriving (Eq, Show, Data)
+
+makePrisms ''Action
 
 -- | An edge between two states is labeled with an action.
 type Edge = (StateNum, Action, StateNum)
@@ -103,12 +107,12 @@ stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
 stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
 
-stmToPG qs qe (RecordAssignment i rs) = do
-  fs <- getFields i & fmap (++ repeat "???") -- TODO: undefined behaviour
-  states' <- replicateM (length (zip fs rs) - 1) newState
+stmToPG qs qe (RecordAssignment r vals) = do
+  fs <- getFields r
+  states' <- replicateM (length (zip fs vals) - 1) newState
   let states = qs : states' ++ [qe]
-      triples = zip3 fs rs (zip states (tail states))
-      mkEdge (f, v, (q1, q2)) = (q1, AssignAction (FieldAccess i f) v, q2)
+      triples = zip3 fs vals (zip states (tail states))
+      mkEdge (f, v, (q1, q2)) = (q1, AssignAction (FieldAccess r f) v, q2)
   pure $ map mkEdge triples
 
 stmToPG qs qe (IfThen (test -> (yes, no)) body) = do

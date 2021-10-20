@@ -1,68 +1,59 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies               #-}
-
 module MicroC.Analysis.ReachingDefinitions
 ( RD
 , RDResult
 , getAllNames
 ) where
+
 import           Control.Lens        ((^..))
 import           Data.Data.Lens      (biplate)
-import           Data.Lattice
-import qualified Data.Set            as S
-import           MicroC.AST          hiding (Variable)
-import qualified MicroC.AST          as AST
+import           Data.Lattice        (Poset (..))
+import           Data.Set            hiding (map)
+import           MicroC.AST
 import           MicroC.Analysis
 import           MicroC.ID
 import           MicroC.ProgramGraph
 
-
 -- | An empty data type for instantiating the analysis.
 data RD
 
-type RDResult  = (ID, StateNum, StateNum)
+-- | The result of the Reaching Definitions analysis.
+type RDResult = (ID, StateNum, StateNum)
 
 instance Analysis RD where
   type Result RD = Poset RDResult
   direction = Forward
-  initialValue pg = Poset $ S.mapMonotonic (,-2, 0) $ getAllNames pg
-  analyze pg e (Poset s) = Poset $ (s S.\\ kill e pg) `S.union` gen e
+  initialValue pg = Poset $ mapMonotonic (,-2, 0) $ getAllNames pg
+  analyze pg e (Poset s) = Poset $ (s \\ kill e pg) `union` gen e
 
--- Missing record dec: How to refer to a record itself, and not an access?
--- Need to pass PG to analysis and kill/gen
-kill :: Edge -> PG  -> S.Set RDResult
+kill :: Edge -> PG -> Set RDResult
 kill (_, action, _) pg = case action of
-  DeclAction (VariableDecl x)             -> S.fromList (killDefinition (Variable x) pg)
-  DeclAction (RecordDecl r ids)           -> S.fromList (concatMap (\ i -> killDefinition (RecordField r i) pg) ids)
-  DeclAction (ArrayDecl _ x)              -> S.fromList (killDefinition (Array x) pg)
-  AssignAction (AST.Variable x) _         -> S.fromList (killDefinition (Variable x) pg)
-  AssignAction (AST.FieldAccess i i') _   -> S.fromList (killDefinition (RecordField i i') pg)
-  ReadAction (AST.Variable x)             -> S.fromList (killDefinition (Variable x) pg)
-  ReadAction (AST.FieldAccess i i')       -> S.fromList (killDefinition (RecordField i i') pg)
-  _                                       -> S.empty
+  DeclAction (VariableDecl x)      -> killDefinition (VariableID x)
+  DeclAction (RecordDecl r ids)    -> mconcat $ map (killDefinition . FieldID r) ids
+  DeclAction (ArrayDecl _ x)       -> killDefinition (ArrayID x)
+  AssignAction (Variable x) _      -> killDefinition (VariableID x)
+  AssignAction (FieldAccess r f) _ -> killDefinition (FieldID r f)
+  ReadAction (Variable x)          -> killDefinition (VariableID x)
+  ReadAction (FieldAccess i i')    -> killDefinition (FieldID i i')
+  _                                -> empty
+  where
+    killDefinition :: ID -> Set RDResult
+    killDefinition x = fromList $ (x, -2, 0) : map (\(qs, _, qe) -> (x, qs, qe)) pg
 
-gen :: Edge  -> S.Set RDResult
+gen :: Edge -> Set RDResult
 gen (qs, action, qe) = case action of
-  DeclAction (VariableDecl x)             -> S.singleton (Variable x, qs, qe)
-  DeclAction (RecordDecl r ids)           -> S.fromList (map (\ i -> (RecordField r i,qs,qe)) ids)
-  DeclAction (ArrayDecl _ x)              -> S.singleton (Array x, qs, qe)
-  AssignAction (AST.Variable x) _         -> S.singleton (Variable x, qs, qe)
-  AssignAction (AST.ArrayIndex x _) _     -> S.singleton (Array x, qs, qe)
-  AssignAction (AST.FieldAccess i i') _   -> S.singleton (RecordField i i', qs, qe)
-  ReadAction (AST.Variable x)             -> S.singleton (Variable x, qs, qe)
-  ReadAction (AST.ArrayIndex x _)         -> S.singleton (Array x, qs, qe)
-  ReadAction (AST.FieldAccess i i')       -> S.singleton (RecordField i i', qs, qe)
-  _                                       -> S.empty
+  DeclAction (VariableDecl x)      -> singleton (VariableID x, qs, qe)
+  DeclAction (RecordDecl r ids)    -> fromList $ map ((, qs, qe) . FieldID r) ids
+  DeclAction (ArrayDecl _ x)       -> singleton (ArrayID x, qs, qe)
+  AssignAction (Variable x) _      -> singleton (VariableID x, qs, qe)
+  AssignAction (ArrayIndex x _) _  -> singleton (ArrayID x, qs, qe)
+  AssignAction (FieldAccess r f) _ -> singleton (FieldID r f, qs, qe)
+  ReadAction (Variable x)          -> singleton (VariableID x, qs, qe)
+  ReadAction (ArrayIndex x _)      -> singleton (ArrayID x, qs, qe)
+  ReadAction (FieldAccess r f)     -> singleton (FieldID r f, qs, qe)
+  _                                -> empty
 
-getAllNames :: PG -> S.Set ID
-getAllNames pg = S.fromList $ defs ++ usages
+getAllNames :: PG -> Set ID
+getAllNames pg = fromList $ defs ++ usages
   where
     usages = map lval2ID (pg ^.. biplate :: [LValue 'CInt])
     defs = concatMap def2IDs (pg ^.. biplate :: [Declaration])
-
-killDefinition :: ID -> PG -> [RDResult]
-killDefinition x pg = (x, -2, 0) : map (\(qs, qe) -> (x, qs, qe)) statePairs
-  where
-  statePairs :: [(StateNum, StateNum)]
-  statePairs = map (\(qs, _, qe) -> (qs, qe)) pg
