@@ -8,6 +8,7 @@ import           Data.Lattice
 import           Data.List                           (intercalate)
 import qualified Data.Map.Lazy                       as M
 import           Data.Map.Lens                       (toMapOf)
+import           Data.Ratio                          ((%))
 import qualified Data.Set                            as S
 import           Data.String.Interpolate             (i)
 import           MicroC.AST
@@ -55,6 +56,42 @@ instance Num Int' where
     NegInf -> Inf
     Int n  -> Int $ negate n
 
+instance Enum Int' where
+  toEnum = Int
+  fromEnum (Int x) = x
+  fromEnum NegInf  = minBound
+  fromEnum Inf     = maxBound
+
+instance Real Int' where
+  toRational NegInf  = -1 % 0
+  toRational Inf     = 1 % 0
+  toRational (Int x) = toInteger x % 1
+
+instance Integral Int' where
+  quotRem (Int 0) (Int 0) = error [i|Int' :: quotRem 0 0 is undefined|]
+  quotRem x (Int 0) = (signum x * Inf, error [i|Int' :: #{x} mod 0 is undefined|])
+
+  quotRem (Int 0) (Int _) = (0, 0)
+  quotRem (Int x) (Int y) = quotRem x y & both %~ Int
+  quotRem (Int x) Inf = (0, Int x)
+  quotRem x@(Int _) NegInf
+    | x > 0 = (-1, NegInf)
+    | x < 0 = (0, x)
+    | otherwise = (0, 0)
+  quotRem NegInf NegInf = (1, 0)
+  quotRem NegInf Inf = (-1, -1)
+  quotRem Inf NegInf = (0, Inf)
+  quotRem Inf Inf = (1, 0)
+  quotRem NegInf x@(Int _)
+    | x > 0     = (NegInf, error [i|Int' :: #{NegInf} mod #{x} is undefined|])
+    | otherwise = (Inf, error [i|Int' :: #{NegInf} mod #{x} is undefined|])
+  quotRem Inf x@(Int _)
+    | x > 0     = (Inf, error [i|Int' :: #{Inf} mod #{x} is undefined|])
+    | otherwise = (NegInf, error [i|Int' :: #{Inf} mod #{x} is undefined|])
+
+  toInteger (Int x) = toInteger x
+  toInteger x       = error [i|Int' :: toInteger #{x}|]
+
 instance Ord Int' where
   NegInf <= _        = True
   _ <= NegInf        = False
@@ -101,7 +138,7 @@ instance Lattice Interval where
       where
         kmin = max a c
         kmax = min b d
-  infimum _ _                     = Bottom
+  infimum _ _ = Bottom
 
 instance Show Interval where
   show Bottom        = "⊥"
@@ -162,6 +199,14 @@ normalizeMax b
   | b < min' = min'
   | otherwise = b
 
+removeElem :: Interval -> Int -> Interval
+removeElem (Between a b) (Int -> x)
+  | a == b && b == x = Bottom
+  | a == x    = Between (normalizeMin $ a + 1) b
+  | b == x    = Between a (normalizeMax $ b - 1)
+  | otherwise = Between a b
+removeElem x _ = x
+
 intOf :: ID -> Lens' Memory (Maybe Interval)
 intOf x = intervals . at x
 
@@ -189,8 +234,13 @@ evalOp op (Between a1 b1) (Between a2 b2) = case op of
   Sub -> Between (normalizeMin $ a1 - b2) (normalizeMax $ b1 - a2)
   Mult -> let combos = (*) <$> [a1, b1] <*> [a2, b2]
           in Between (normalizeMin $ minimum combos) (normalizeMax $ maximum combos)
-  _ -> Between NegInf Inf -- TODO: Other operators
-
+  Div -> evalOp Mult (Between a1 b1) (inverse (nonZero (Between a2 b2)))
+    where
+      inverse Bottom        = Bottom
+      inverse (Between x y) = Between (1 `div` y) (1 `div` x)
+  _ -> top -- TODO: Other operators
+  where
+    nonZero = flip removeElem 0
 evalAction :: Action -> Eval ()
 evalAction = \case
   DeclAction   de                 -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
@@ -225,11 +275,9 @@ evalAction = \case
               (Between a a', Between a'' a''') | a == a' && a' == a'' && a'' == a''' ->
                 intOf ref .= Just Bottom
               -- only if we have something like x in [2, 5] != 2 or != 5, then we can conclude x in [3, 5] or [2, 4]
-              -- doesn't work with infinities
-              (Between a b, Between x x') | x == x' && a /= NegInf && b /= Inf ->
-                intOf ref .= Just (if | a == x -> Between (a + 1) b
-                                      | b == x -> Between a (b - 1)
-                                      | otherwise -> Between a b)
+              -- doesn't work with infinities, but that's covered by removeElem
+              (Between a b, Between (Int x) (Int x')) | x == x' ->
+                intOf ref .= Just (removeElem (Between a b) x)
               _ -> pure ()
         OpR {}            -> pure ()
         OpB l And r       -> processB l >> processB r
