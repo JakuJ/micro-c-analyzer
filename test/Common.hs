@@ -26,7 +26,7 @@ runWithInput program = runWriter . runReaderT (unTest (evalProgram program))
 
 -- | A list of names of the example programs from the "sources" folder.
 programs :: [String]
-programs = ["danger", "even", "factorial", "faint", "fibonacci", "ifte", "intervals", "precedence", "records"]
+programs = ["danger", "even", "factorial", "faint", "fibonacci", "ifte", "intervals", "precedence", "records", "arr_range", "monte_carlo", "pos_avg"]
 
 -- | Returns a list of program graphs of the example programs from the "sources" folder.
 programGraphs :: IO [PG]

@@ -8,10 +8,10 @@ module MicroC.Interpreter
 , evalProgram
 ) where
 
-import           Control.Lens             hiding (op)
-import           Control.Monad.State.Lazy
-import           Data.Bits                ((.&.), (.|.))
-import           Data.Map.Lazy            (Map, empty)
+import           Control.Lens               hiding (op)
+import           Control.Monad.State.Strict
+import           Data.Bits                  ((.&.), (.|.))
+import           Data.Map.Strict            (Map, empty)
 import           MicroC.AST
 
 -- | The type used to represent the runtime memory of the program.

@@ -40,6 +40,10 @@ default-extensions:
 - QuasiQuotes
 
 ghc-options:
+  # profiling
+  - -eventlog
+  - -fprof-auto
+  - -fno-prof-count-entries
   # optimization
   - -flate-dmd-anal
   - -flate-specialise

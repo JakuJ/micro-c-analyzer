@@ -33,7 +33,7 @@ instance Num Int' where
 
   (Int x) * (Int y) = Int $ x * y
   _ * (Int 0)       = Int 0 -- includes infinities which makes sense for intervals
-  (Int 0) * _       = Int 0 -- (inf * 0 = 0) since inf just means (unknowingly big), but 0 is known
+  (Int 0) * _       = Int 0 -- (inf * 0 = 0) since inf just means [unknowingly big], but 0 is known
   NegInf * x        = if signum x == -1 then Inf else NegInf
   x * NegInf        = NegInf * x
   Inf * x           = if signum x == -1 then NegInf else Inf
@@ -67,8 +67,8 @@ instance Bounded Int' where
   maxBound = Inf
 
 instance Show Int' where
-  show Inf     = "Infinity"
-  show NegInf  = "-Infinity"
+  show Inf     = "∞"
+  show NegInf  = "-∞"
   show (Int n) = show n
 
 -- | The type of an interval between two (potentially infinite) integers.
@@ -104,8 +104,8 @@ instance Lattice Interval where
   infimum _ _                     = Bottom
 
 instance Show Interval where
-  show Bottom        = "_|_"
-  show (Between a b) = [i|[#{a}, #{b}]|]
+  show Bottom        = "⊥"
+  show (Between a b) = [i|{#{a}..#{b}}|]
 
 -- | State of the computation.
 data Memory = Memory
@@ -134,7 +134,7 @@ instance SemiLattice Union where
 
 instance Show Union where
   show (Union (M.assocs -> assocs))
-    = "[" <> intercalate ", " (map (\(a, b) -> [i|#{a} -> #{b}|]) assocs) <> "]"
+    = intercalate ", " (map (\(a, b) -> [i|#{a} ∈ #{b}|]) assocs)
 
 instance Analysis IA where
   type Result IA = Union
@@ -148,8 +148,8 @@ declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . 
 
 -- TODO: Make these not constant
 min', max' :: Int'
-min' = Int (-100)
-max' = Int 100
+min' = Int (-10000)
+max' = Int 10000
 
 normalizeMin, normalizeMax :: Int' -> Int'
 normalizeMin a
@@ -169,10 +169,11 @@ evalExpr :: RValue 'CInt -> Eval Interval
 evalExpr (Literal (Int -> x)) = pure $ Between (normalizeMin x) (normalizeMax x)
 evalExpr (Reference lv@(lval2ID -> v)) = case lv of
   ArrayIndex name ix -> do
+    -- we default to 0 as the size here - for undefined arrays this will cause the range to be Bottom every time
     arrlen <- use (arrays . at name . non 0)
     indexRange <- evalExpr ix
     if indexRange `infimum` Between (normalizeMin 0) (normalizeMax (Int arrlen - 1)) /= Bottom
-      -- array have to be declared
+      -- arrays have to be declared
       then use (intOf v . non Bottom)
       -- array index out of possible bounds
       else pure Bottom
@@ -186,7 +187,7 @@ evalOp _ _ Bottom = Bottom
 evalOp op (Between a1 b1) (Between a2 b2) = case op of
   Add -> Between (normalizeMin $ a1 + a2) (normalizeMax $ b1 + b2)
   Sub -> Between (normalizeMin $ a1 - b2) (normalizeMax $ b1 - a2)
-  Mult -> let combos = (*) <$> [a1, a2] <*> [b1, b2]
+  Mult -> let combos = (*) <$> [a1, b1] <*> [a2, b2]
           in Between (normalizeMin $ minimum combos) (normalizeMax $ maximum combos)
   _ -> Between NegInf Inf -- TODO: Other operators
 
@@ -215,7 +216,7 @@ evalAction = \case
           ri <- evalExpr r
           case op of
             Lt  -> intOf ref .= Just (infimum li (extendLeft (ri & _Between . both -~ 1)))
-            Gt  -> pure ()
+            Gt  -> intOf ref .= Just (infimum li (extendRight (ri & _Between . both +~ 1)))
             Le  -> intOf ref .= Just (infimum li (extendLeft ri))
             Ge  -> intOf ref .= Just (infimum li (extendRight ri))
             Eq  -> intOf ref .= Just (infimum li ri)

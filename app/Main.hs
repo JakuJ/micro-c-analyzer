@@ -44,4 +44,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @IA "arr_range"
+main = analyseFile @IA "monte_carlo"
