@@ -3,18 +3,23 @@
 module MicroC.Analysis.IntervalAnalysis
 ( IA
 , AbsMemory(..)
+, idiv
+, between
 ) where
 
 import           Control.Lens                        hiding (ix, op)
 import           Control.Monad.State.Lazy
 import           Data.IntegerInterval
+import qualified Data.Interval                       as I
 import           Data.Lattice
 import           Data.List                           (intercalate)
 import qualified Data.Map.Lazy                       as M
 import           Data.Map.Lens                       (toMapOf)
 import           Data.Maybe                          (fromJust)
+import           Data.Ratio                          (Ratio, (%))
 import qualified Data.Set                            as S
 import           Data.String.Interpolate             (i)
+import           GHC.Real                            (Ratio ((:%)))
 import           MicroC.AST
 import           MicroC.Analysis
 import           MicroC.Analysis.ReachingDefinitions (getAllNames)
@@ -85,6 +90,7 @@ evalOp op i1 i2 = normalize $ case op of
   Add  -> i1 + i2
   Sub  -> i1 - i2
   Mult -> i1 * i2
+  Div  -> i1 `idiv` i2
   _    -> top -- TODO: Other operators
 
 evalAction :: Action -> Eval ()
@@ -95,6 +101,7 @@ evalAction = \case
   WriteAction  _      -> pure ()
   BoolAction   action -> processB action
     where
+      -- TODO: Do the whole {tt, ff} stuff from the book
       processB :: RValue 'CBool -> Eval ()
       processB = \case
         Literal True  -> pure ()
@@ -158,6 +165,51 @@ evalAction = \case
         Eq  -> Eq
         Neq -> Neq
 
+-- INTERVAL DIVISION
+
+idiv :: Interval -> Interval -> Interval
+idiv i1 = fromRatioInterval . I.hulls . map (toRatioInterval i1 *) . inverse . toRatioInterval
+
+inverse :: I.Interval (Ratio Integer) -> [I.Interval (Ratio Integer)]
+inverse iv
+  | iv == 0 = []
+  | 0 `I.notMember` iv = pure $ inv b I.<=..<= inv a
+  | a == 0 = pure $ inv b I.<=..<= 1
+  | b == 0 = pure $ -1 I.<=..<= inv a
+  | otherwise = [-1 I.<=..<= inv a, inv b I.<=..<= 1]
+  where
+    (a, b) = (I.lowerBound iv, I.upperBound iv)
+
+    inv :: Extended (Ratio Integer) -> Extended (Ratio Integer)
+    inv = \case
+      NegInf -> 0
+      PosInf -> 0
+      Finite x -> case x of
+        0 :% k -> Finite (signum k % 1) * PosInf
+        k :% j -> Finite $ j % k
+
+toRatioInterval :: Interval -> I.Interval (Ratio Integer)
+toRatioInterval (bounds -> (a, b)) = ar I.<=..<= br
+  where
+    (ar, br) = (a, b) & each %~ \case
+                                  NegInf   -> NegInf
+                                  PosInf   -> PosInf
+                                  Finite x -> Finite $ x % 1
+
+fromRatioInterval :: I.Interval (Ratio Integer) -> Interval
+fromRatioInterval iv = between (toI a) (toI b)
+  where
+    (a, b) = (I.lowerBound iv, I.upperBound iv)
+
+    toI :: Extended (Ratio Integer) -> Int'
+    toI = \case
+      (Finite x) -> toI' x
+      NegInf     -> NegInf
+      PosInf     -> PosInf
+
+    toI' :: Ratio Integer -> Int'
+    toI' (x :% y) = Finite $ x `quot` y
+
 -- HELPER FUNCTIONS
 
 -- | Traverse over array declarations and make a `Map` from their names to their sizes.
@@ -212,6 +264,9 @@ lv .== r = case lv of
 -- | A version of '.==' that takes a monadic argument.
 (<~~) :: LValue 'CInt -> Eval Interval -> Eval ()
 (<~~) lv = ((lv .==) =<<)
+
+bounds :: Interval -> (Int', Int')
+bounds x = (lowerBound x, upperBound x)
 
 -- INSTANCES
 

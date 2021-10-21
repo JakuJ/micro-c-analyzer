@@ -28,6 +28,7 @@ runWithInput program = runWriter . runReaderT (unTest (evalProgram program))
 programs :: [String]
 programs =  [ "arr_range"
             , "dangerEven"
+            , "division"
             , "even"
             , "factorial"
             , "faint"

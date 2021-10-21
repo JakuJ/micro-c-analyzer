@@ -1,8 +1,14 @@
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+
 module IntervalSpec (spec) where
 
-import           Control.Exception (evaluate)
+import           Control.Exception                (evaluate)
 import           Data.ExtendedReal
+import           Data.IntegerInterval
+import           MicroC.Analysis.IntervalAnalysis
 import           Test.Hspec
+import           Test.Hspec.QuickCheck            (prop)
+import           Test.QuickCheck                  (discard)
 
 spec :: Spec
 spec = parallel $ do
@@ -47,3 +53,18 @@ spec = parallel $ do
     NegInf * 0 `shouldBe` 0
     0 * PosInf `shouldBe` 0
     0 * NegInf `shouldBe` 0
+
+  prop "singleton interval division" $ \(i, j) -> do
+    if j == 0 then discard else
+      let fi = Finite i
+          fj = Finite j
+      in
+        pickup (between fi fi `idiv` between fj fj) == Just (i `quot` j)
+
+  it "interval division" $ do
+    (between 0 100 `idiv` 5) `shouldBe` between 0 20
+    (between (-300) 200 `idiv` 5) `shouldBe` between (-60) 40
+    (between (-200) 0 `idiv` 5) `shouldBe` between (-40) 0
+    (between (-100) 300 `idiv` between (-3) 5) `shouldBe` between (-300) 300
+    (between (-100) 300 `idiv` between (-5) (-3)) `shouldBe` between (-100) 33
+    (between (-100) 300 `idiv` between 3 5) `shouldBe` between (-33) 100
