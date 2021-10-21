@@ -18,8 +18,11 @@ class SemiLattice a => Lattice a where
   top :: a
   infimum :: a -> a -> a
 
-newtype Poset a = Poset (Set a)
-  deriving (Eq, Show) via Set a
+newtype Poset a = Poset (S.Set a)
+  deriving (Eq)
+
+instance Show a => Show (Poset a) where
+  show (Poset s) = "{" <> intercalate ", " (S.toList (S.map show s)) <> "}"
 
 instance Show a => Show (Poset a) where
   show (Poset s) = "{" <> intercalate ", " (S.toList (S.map show s)) <> "}"
