@@ -39,6 +39,7 @@ programs =  [ "arr_range"
             , "pos_avg"
             , "precedence"
             , "records"
+            , "sum_arr"
             ]
 
 -- | Returns a list of program graphs of the example programs from the "sources" folder.

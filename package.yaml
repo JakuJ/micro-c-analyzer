@@ -18,6 +18,8 @@ dependencies:
 - lens
 - mtl
 - string-interpolate
+- data-interval
+- extended-reals
 
 default-extensions:
 - DataKinds
