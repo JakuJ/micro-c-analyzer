@@ -59,6 +59,7 @@ library
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
+      PatternSynonyms
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -96,6 +97,7 @@ executable micro-c-analyzer-exe
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
+      PatternSynonyms
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -143,6 +145,7 @@ test-suite micro-c-analyzer-test
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
+      PatternSynonyms
       RankNTypes
       StandaloneDeriving
       TupleSections

@@ -9,13 +9,15 @@ module MicroC.Analysis.IntervalAnalysis
 
 import           Control.Lens                        hiding (ix, op)
 import           Control.Monad.State.Lazy
+import           Data.Data.Lens                      (biplate)
+import           Data.Foldable                       (foldl')
 import           Data.IntegerInterval
 import qualified Data.Interval                       as I
 import           Data.Lattice
 import           Data.List                           (intercalate)
 import qualified Data.Map.Lazy                       as M
 import           Data.Map.Lens                       (toMapOf)
-import           Data.Maybe                          (fromJust)
+import           Data.Maybe                          (catMaybes)
 import           Data.Ratio                          (Ratio, (%))
 import qualified Data.Set                            as S
 import           Data.String.Interpolate             (i)
@@ -23,7 +25,7 @@ import           GHC.Real                            (Ratio ((:%)))
 import           MicroC.AST
 import           MicroC.Analysis
 import           MicroC.Analysis.ReachingDefinitions (getAllNames)
-import           MicroC.ID                           (ID, def2IDs, lval2ID)
+import           MicroC.ID
 import           MicroC.ProgramGraph
 import           Prelude                             hiding (null)
 
@@ -87,11 +89,11 @@ evalOp :: OpArith -> Interval -> Interval -> Interval
 evalOp _ (null -> True) _ = bottom
 evalOp _ _ (null -> True) = bottom
 evalOp op i1 i2 = normalize $ case op of
-  Add  -> i1 + i2
-  Sub  -> i1 - i2
-  Mult -> i1 * i2
-  Div  -> i1 `idiv` i2
-  Mod  -> i1 `imod` i2
+  Add    -> i1 + i2
+  Sub    -> i1 - i2
+  Mult   -> i1 * i2
+  Div    -> i1 `idiv` i2
+  Mod    -> i1 `imod` i2
   _    -> top -- TODO: Other operators
 
 evalAction :: Action -> Eval ()
@@ -100,71 +102,119 @@ evalAction = \case
   AssignAction lv rv  -> lv <~~ evalExpr rv
   ReadAction   lv     -> lv .== top
   WriteAction  _      -> pure ()
-  BoolAction   action -> processB action
+  BoolAction   action -> do
+    current <- use intervals
+    let usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
+        possibilities = mapProduct usedIDs current
+    states <- fmap catMaybes $ forM possibilities $ \m -> do
+      withState (intervals .~ m) $ do
+        Poset outcomes <- processB action
+        if True `S.member` outcomes
+          then Just <$> use intervals
+          else pure Nothing
+    let (Abs union) = foldl' supremum (Abs M.empty) $ map Abs states
+    intervals .= union
     where
-      -- TODO: Do the whole {tt, ff} stuff from the book
-      processB :: RValue 'CBool -> Eval ()
+      mapProduct :: S.Set ID -> M.Map ID Interval -> [M.Map ID Interval]
+      mapProduct ids = map M.fromList . mapM (choose ids) . M.assocs
+        where
+          choose :: S.Set ID -> (ID, Interval) -> [(ID, Interval)]
+          choose _ (ArrayID a, int) = [(ArrayID a, int)]
+          choose usedIds (k, int)
+            | S.notMember k usedIds = [(k, int)]
+            | otherwise = do
+              let ((a', b'), other) = case bounds int of
+                    (NegInf, PosInf) -> ((min', max'), [between NegInf min', between max' PosInf])
+                    (NegInf, Finite x) -> ((min', Finite x), [between NegInf min'])
+                    (Finite x, PosInf) -> ((Finite x, max'), [between max' PosInf])
+                    (x, y) -> ((x, y), [])
+              v <- other <> map (\x -> between (Finite x) (Finite x)) [toInteger' a' .. toInteger' b']
+              pure (k, v)
+
+          toInteger' (Finite x) = x
+          toInteger' _          = error "toInteger' :: Unreachable"
+
+      processB :: RValue 'CBool -> Eval Branches
       processB = \case
-        Literal True  -> pure ()
-        Literal False -> intervals %= M.map (const bottom)
-        OpR ref@(Reference _) op ref2@(Reference _) -> do
-          left <- evalExpr ref
-          right <- evalExpr ref2
-          processRef ref op right
-          processRef ref2 (flipRelation op) left
-        OpR l op r@(Reference _) -> evalAction $ BoolAction $ OpR r (flipRelation op) l
-        OpR ref@(Reference _) op r -> processRef ref op =<< evalExpr r
-        OpR {}            -> pure ()
-        OpB l And r       -> processB l >> processB r
-        OpB _ Or _        -> pure ()
-        Not (OpR a op b)  -> processB (OpR a (inverseRelation op) b)
-        Not (OpB a And b) -> processB $ OpB (Not a) Or (Not b)
-        Not (OpB a Or b)  -> processB $ OpB (Not a) And (Not b)
-        Not (Not b)       -> processB b
-        Not (Literal b)   -> processB $ Literal (not b)
+        Literal True  -> pure Yes
+        Literal False -> pure No
+        OpR l op r -> processOp op <$> evalExpr l <*> evalExpr r
+        OpB l And r   -> do
+          l' <- processB l
+          r' <- processB r
+          case l' of
+            Impossible -> pure Impossible
+            Yes -> pure r'
+            No -> pure No
+            Dunno -> pure $ case r' of
+              Impossible -> Impossible
+              No         -> No
+              Dunno      -> Dunno
+              Yes        -> Dunno
+        OpB l Or r        -> do
+          l' <- processB l
+          r' <- processB r
+          case l' of
+            Impossible -> pure Impossible
+            Yes -> pure Yes
+            No -> pure r'
+            Dunno -> pure $ case r' of
+              Impossible -> Impossible
+              No         -> Dunno
+              Dunno      -> Dunno
+              Yes        -> Yes
+        Not someOp -> do
+          Poset branches <- processB someOp
+          pure . Poset . S.map not $ branches
 
-      processRef :: RValue 'CInt -> OpRel -> Interval -> Eval ()
-      processRef ref@(Reference lv) op ri = do
-        li <- evalExpr ref
-        case op of
-            Lt  -> lv .== infimum li (extendLeft (ri - 1))
-            Gt  -> lv .== infimum li (extendRight (ri + 1))
-            Le  -> lv .== infimum li (extendLeft ri)
-            Ge  -> lv .== infimum li (extendRight ri)
-            Eq  -> lv .== infimum li ri
-            Neq ->
-              -- if we have [a, a] != [a, a], then we have unreachable code
-              if  | isSingleton li && isSingleton ri && li == ri -> lv .== bottom
-              -- only if we have something like x in [2, 5] != 2 or != 5, then we can conclude x in [3, 5] or [2, 4]
-              -- doesn't work with infinities, but that's covered by removeElem
-                  | isSingleton ri -> lv .== removeElem li (fromJust $ pickup ri)
-                  | otherwise -> pure ()
-      processRef _ _ _ = pure ()
+      processOp :: OpRel -> Interval -> Interval -> Branches
+      processOp op l@(bounds -> (a, b)) r@(bounds -> (c, d))
+        | null l || null r = bottom
+        | otherwise = case op of
+            Lt -> if  | b < c     -> Yes
+                      | a >= d    -> No
+                      | otherwise -> Dunno
+            Gt -> if  | a > d     -> Yes
+                      | b <= c    -> No
+                      | otherwise -> Dunno
+            Le -> if  | b <= c    -> Yes
+                      | a > d     -> No
+                      | otherwise -> Dunno
+            Ge -> if  | a >= d    -> Yes
+                      | b < c     -> No
+                      | otherwise -> Dunno
+            Eq -> if  | a == b && b == c && c == d -> Yes
+                      | null $ l `infimum` r       -> No
+                      | otherwise                  -> Dunno
+            Neq -> if | a == b && b == c && c == d -> No
+                      | null $ l `infimum` r       -> Yes
+                      | otherwise                  -> Dunno
 
-      extendLeft, extendRight :: Interval -> Interval
-      extendLeft iv
-        | null iv = bottom
-        | otherwise = between NegInf (upperBound iv)
-      extendRight iv
-        | null iv = bottom
-        | otherwise = between (lowerBound iv) PosInf
+-- BRANCHING PATTERNS
 
-      inverseRelation, flipRelation :: OpRel -> OpRel
-      inverseRelation = \case
-        Lt  -> Ge
-        Le  -> Gt
-        Ge  -> Lt
-        Gt  -> Le
-        Eq  -> Neq
-        Neq -> Eq
+type Branches = Poset Bool
 
-      flipRelation = \case
-        Lt  -> Gt
-        Gt  -> Lt
-        Ge  -> Le
-        Le  -> Ge
-        Eq  -> Eq
-        Neq -> Neq
+pattern Impossible :: Poset Bool
+pattern Impossible <- Poset (S.toList -> [])
+  where
+    Impossible = Poset S.empty
+
+pattern Yes :: Poset Bool
+pattern Yes <- Poset (S.toList -> [True])
+  where
+    Yes = Poset $ S.singleton True
+
+pattern No :: Poset Bool
+pattern No <- Poset (S.toList -> [False])
+  where
+    No = Poset $ S.singleton False
+
+pattern Dunno :: Poset Bool
+pattern Dunno <- Poset (S.toList -> [False, True])
+  where
+    Dunno = Poset $ S.fromList [False, True]
+
+{-# COMPLETE Impossible, Yes, No, Dunno #-}
 
 -- INTERVAL DIVISION
 
@@ -265,8 +315,8 @@ declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . 
 
 -- TODO: Make these not constant
 min', max' :: Int'
-min' = -20000
-max' = 20000
+min' = -10
+max' = 10
 
 -- | Smart constructor for Intervals bounded between the min and max values.
 between :: Int' -> Int' -> Interval
@@ -284,14 +334,6 @@ between a b = a' <=..<= b'
 -- | Interval normalization function.
 normalize :: Interval -> Interval
 normalize a = between (lowerBound a) (upperBound a)
-
--- | Remove a single value from the interval.
---   This only changes the interval if the value was one of the (finite) bounds.
-removeElem :: Interval -> Integer -> Interval
-removeElem iv x = left `hull` right
-  where
-    left = iv `intersection` (NegInf <=..< Finite x)
-    right = iv `intersection` (Finite x <..<= PosInf)
 
 -- | Focuses on the 'Interval' assigned to the provided 'ID' in the abstract memory.
 intOf :: ID -> Lens' Memory (Maybe Interval)

@@ -4,7 +4,7 @@ module IntervalSpec (spec) where
 
 import           Control.Exception                (evaluate)
 import           Data.ExtendedReal
-import           Data.IntegerInterval
+import           Data.IntegerInterval             (member)
 import           MicroC.Analysis.IntervalAnalysis
 import           Test.Hspec
 import           Test.Hspec.QuickCheck            (prop)
@@ -59,7 +59,7 @@ spec = parallel $ do
       let fi = Finite i
           fj = Finite j
       in
-        pickup (between fi fi `idiv` between fj fj) == Just (i `quot` j)
+        (i `quot` j) `member` (between fi fi `idiv` between fj fj)
 
   it "interval division" $ do
     (between 0 100 `idiv` 5) `shouldBe` between 0 20
