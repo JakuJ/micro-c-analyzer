@@ -3,15 +3,11 @@
 module MicroC.Analysis.DetectionOfSigns
 ( DS
 ) where
-import           Control.Monad.Writer                (All (getAll))
-import qualified Data.IntMap.Lazy                    as Set
 import           Data.Lattice
 import           Data.List
 import qualified Data.Map                            as M
-import qualified Data.Map.Lazy                       as M
 import qualified Data.Set                            as S
 import           Data.String.Interpolate
-import           GHC.Show                            (Show)
 import           MicroC.AST                          hiding (Variable)
 import qualified MicroC.AST                          as AST
 import           MicroC.Analysis
@@ -21,11 +17,10 @@ import           MicroC.ProgramGraph
 
 
 
-
-
-
--- | The type of the sign
 data Sign = Minus | Zero | Plus
+  deriving (Eq, Ord)
+
+data BoolSign = Tt | Ff
   deriving (Eq, Ord)
 
 -- | An empty data type for instantiating the analysis.
@@ -36,7 +31,7 @@ newtype State = State (M.Map ID (Poset Sign))
 
 instance Show State where
   show (State (M.assocs -> assocs))
-    = intercalate ", " (map (\(a, b) -> [i|#{a} ∈ #{b}|]) assocs)
+    = intercalate ", " (map (\(a, b) -> [i|#{a} : #{b}|]) assocs)
 
 instance Show Sign where
   show Plus  = "+"
@@ -53,6 +48,11 @@ instance SemiLattice State where
   supremum (State a) (State b) = State $ M.unionWith supremum a b
 
 
+instance Lattice (Poset Sign) where
+  infimum (Poset s1) (Poset s2) = Poset $ S.intersection s1 s2
+  top = Poset $ S.fromList [Plus, Zero, Minus]
+
+
 
 instance Analysis DS where
   type Result DS = State
@@ -65,13 +65,9 @@ instance Analysis DS where
     AssignAction (AST.ArrayIndex a i) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
     ReadAction lval -> State $ M.insert (lval2ID lval) (Poset (S.fromList [Minus, Zero, Plus])) result
+    BoolAction rval -> foldr (\ s1 s2 -> s1 `supremum` s2) (State M.empty) $ filter (\ s -> (Poset (S.singleton Tt)) `order` (boolSign rval s)) (basic (State result))
     _ -> State result
 
-
-
-instance Lattice (Poset Sign) where
-  infimum (Poset s1) (Poset s2) = Poset $ S.intersection s1 s2
-  top = Poset $ S.fromList [Plus, Zero, Minus]
 
 arithmeticSign :: RValue 'CInt -> State -> Poset Sign
 arithmeticSign (Literal x) _
@@ -83,7 +79,6 @@ arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeti
                                                                   else Poset S.empty
 arithmeticSign (Reference x) (State state) = state M.!  lval2ID x
 arithmeticSign (OpA left  op right) (State state) =  absOpA op (arithmeticSign left (State state)) (arithmeticSign right (State state))
--- missing negation
 
 absOpA :: OpArith -> Poset Sign -> Poset Sign -> Poset Sign
 absOpA op (Poset left) (Poset right) = case op of
@@ -92,11 +87,6 @@ absOpA op (Poset left) (Poset right) = case op of
   Mult ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMult leftSign rightSign) (S.cartesianProduct left right)) S.empty
   Div ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absDiv leftSign rightSign) (S.cartesianProduct left right)) S.empty
   Mod -> Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMod leftSign rightSign) (S.cartesianProduct left right)) S.empty
-
-
-
-
-
 
 absPlus :: Sign -> Sign -> S.Set Sign
 absPlus s1 s2 = case s1 of
@@ -134,9 +124,119 @@ absDiv Plus Plus   = S.singleton Plus
 
 absMod :: Sign -> Sign -> S.Set Sign
 absMod Minus Minus = S.fromList [Zero, Minus]
-absMod Minus Plus = S.fromList [Zero, Minus]
+absMod Minus Plus  = S.fromList [Zero, Minus]
 absMod _ Zero      = S.empty
 absMod Zero _      = S.singleton Zero
-absMod Plus Plus = S.fromList [Zero, Plus]
-absMod Plus Minus = S.fromList [Zero, Plus]
+absMod Plus Plus   = S.fromList [Zero, Plus]
+absMod Plus Minus  = S.fromList [Zero, Plus]
 
+
+
+boolSign :: RValue 'CBool -> State -> Poset BoolSign
+boolSign (Literal b) _ = if b then Poset (S.singleton Tt) else  Poset (S.singleton Ff)
+boolSign (OpB left  op right) (State state) = absOpB op (boolSign left (State state)) (boolSign right (State state))
+boolSign (OpR left  op right) (State state) = absOpR op (arithmeticSign left (State state)) (arithmeticSign right (State state))
+boolSign (Not rval) (State state) = absNot  (boolSign rval (State state))
+
+
+absNot :: Poset BoolSign -> Poset BoolSign
+absNot (Poset bSigns) = Poset $ S.map (\ sign -> if sign == Tt then Ff else Tt) bSigns
+
+
+absOpB :: OpBool -> Poset BoolSign -> Poset BoolSign -> Poset BoolSign
+absOpB op (Poset left) (Poset right) = case op of
+  And -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absAnd leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  Or -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absOr leftBool rightBool) (S.cartesianProduct left right)) S.empty
+
+absAnd :: BoolSign -> BoolSign -> S.Set BoolSign
+absAnd Tt Tt = S.singleton Tt
+absAnd _ _   = S.singleton Ff
+
+absOr :: BoolSign -> BoolSign -> S.Set BoolSign
+absOr Ff Ff = S.singleton Ff
+absOr _ _   = S.singleton Tt
+
+
+absOpR :: OpRel  -> Poset Sign -> Poset Sign -> Poset BoolSign
+absOpR op (Poset left) (Poset right) = case op of
+  Lt -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absLt leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  Gt -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absGt leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  Le -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absLe leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  Ge -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absGe leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  Eq -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absEq leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  Neq -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absNeq leftBool rightBool) (S.cartesianProduct left right)) S.empty
+
+
+absLt :: Sign -> Sign -> S.Set BoolSign
+absLt Minus Minus = S.fromList [Tt, Ff]
+absLt Minus Plus  = S.singleton Tt
+absLt Minus Zero  = S.singleton Tt
+absLt Zero Zero   = S.singleton Ff
+absLt Zero Minus  = S.singleton Ff
+absLt Zero Plus   = S.singleton Tt
+absLt Plus Plus   =  S.fromList [Tt, Ff]
+absLt Plus Zero   =  S.singleton Ff
+absLt Plus Minus  =  S.singleton Ff
+
+absGt :: Sign -> Sign -> S.Set BoolSign
+absGt Minus Minus = S.fromList [Tt, Ff]
+absGt Minus Plus  = S.singleton Ff
+absGt Minus Zero  = S.singleton Ff
+absGt Zero Zero   = S.singleton Ff
+absGt Zero Minus  = S.singleton Tt
+absGt Zero Plus   = S.singleton Ff
+absGt Plus Plus   =  S.fromList [Tt, Ff]
+absGt Plus Zero   =  S.singleton Tt
+absGt Plus Minus  =  S.singleton Tt
+
+absLe :: Sign -> Sign -> S.Set BoolSign
+absLe Minus Minus = S.fromList [Tt, Ff]
+absLe Minus Plus  = S.singleton Tt
+absLe Minus Zero  = S.singleton Tt
+absLe Zero Zero   = S.singleton Tt
+absLe Zero Minus  = S.singleton Ff
+absLe Zero Plus   = S.singleton Tt
+absLe Plus Plus   =  S.fromList [Tt, Ff]
+absLe Plus Zero   =  S.singleton Ff
+absLe Plus Minus  =  S.singleton Ff
+
+
+absGe :: Sign -> Sign -> S.Set BoolSign
+absGe Minus Minus = S.fromList [Tt, Ff]
+absGe Minus Plus  = S.singleton Ff
+absGe Minus Zero  = S.singleton Ff
+absGe Zero Zero   = S.singleton Tt
+absGe Zero Minus  = S.singleton Tt
+absGe Zero Plus   = S.singleton Ff
+absGe Plus Plus   =  S.fromList [Tt, Ff]
+absGe Plus Zero   =  S.singleton Tt
+absGe Plus Minus  =  S.singleton Tt
+
+absEq :: Sign -> Sign -> S.Set BoolSign
+absEq Zero Zero = S.singleton Tt
+absEq Zero _    = S.singleton Ff
+absEq _ Zero    = S.singleton Ff
+absEq _ _       = S.fromList [Tt, Ff]
+
+
+absNeq :: Sign -> Sign -> S.Set BoolSign
+absNeq Zero Zero = S.singleton Ff
+absNeq Zero _    = S.singleton Tt
+absNeq _ Zero    = S.singleton Tt
+absNeq _ _       = S.fromList [Tt, Ff]
+
+
+
+mapProduct :: M.Map ID (Poset Sign) -> [M.Map ID (Poset Sign)]
+mapProduct = map (M.fromList . posetify) . mapM choose . M.assocs
+  where
+    choose :: (a, Poset b) -> [(a, b)]
+    choose (k, Poset vs) = do
+      v <- S.toList vs
+      pure (k, v)
+
+    posetify :: [(ID, Sign)] -> [(ID, Poset Sign)]
+    posetify = map (fmap (Poset . S.singleton))
+
+basic :: State -> [State]
+basic (State m) =  map (\x -> State x) $ mapProduct m
