@@ -10,7 +10,6 @@ module MicroC.Analysis.IntervalAnalysis
 import           Control.Lens                        hiding (ix, op)
 import           Control.Monad.State.Lazy
 import           Data.Data.Lens                      (biplate)
-import           Data.Foldable                       (foldl')
 import           Data.IntegerInterval
 import qualified Data.Interval                       as I
 import           Data.Lattice
@@ -89,12 +88,19 @@ evalOp :: OpArith -> Interval -> Interval -> Interval
 evalOp _ (null -> True) _ = bottom
 evalOp _ _ (null -> True) = bottom
 evalOp op i1 i2 = normalize $ case op of
-  Add    -> i1 + i2
-  Sub    -> i1 - i2
-  Mult   -> i1 * i2
-  Div    -> i1 `idiv` i2
-  Mod    -> i1 `imod` i2
+  Add  -> i1 + i2
+  Sub  -> i1 - i2
+  Mult -> i1 * i2
+  Div  -> i1 `idiv` i2
+  Mod  -> i1 `imod` i2
   _    -> top -- TODO: Other operators
+
+data Branches
+  = Impossible -- {}
+  | No         -- {ff}
+  | Yes        -- {tt}
+  | Dunno      -- {ff, tt}
+  deriving (Eq)
 
 evalAction :: Action -> Eval ()
 evalAction = \case
@@ -104,32 +110,32 @@ evalAction = \case
   WriteAction  _      -> pure ()
   BoolAction   action -> do
     current <- use intervals
-    let usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
+    let usedIDs = map lval2ID (action ^.. biplate :: [LValue 'CInt])
         possibilities = mapProduct usedIDs current
-    states <- fmap catMaybes $ forM possibilities $ \m -> do
+    states <- forM possibilities $ \m -> do
       withState (intervals .~ m) $ do
-        Poset outcomes <- processB action
-        if True `S.member` outcomes
+        outcomes <- processB action
+        if outcomes == Yes || outcomes == Dunno
           then Just <$> use intervals
           else pure Nothing
-    let (Abs union) = foldl' supremum (Abs M.empty) $ map Abs states
+    let (Abs union) = foldr (supremum . Abs) (Abs M.empty) . catMaybes $ states
     intervals .= union
     where
-      mapProduct :: S.Set ID -> M.Map ID Interval -> [M.Map ID Interval]
-      mapProduct ids = map M.fromList . mapM (choose ids) . M.assocs
+      mapProduct :: [ID] -> M.Map ID Interval -> [M.Map ID Interval]
+      mapProduct ids = map M.fromList . traverse (choose ids) . M.assocs
         where
-          choose :: S.Set ID -> (ID, Interval) -> [(ID, Interval)]
+          choose :: [ID] -> (ID, Interval) -> [(ID, Interval)]
           choose _ (ArrayID a, int) = [(ArrayID a, int)]
           choose usedIds (k, int)
-            | S.notMember k usedIds = [(k, int)]
-            | otherwise = do
-              let ((a', b'), other) = case bounds int of
+            | k `notElem` usedIds = [(k, int)]
+            | otherwise = map (k,) basics
+                where
+                  basics = other <> map (\x -> between (Finite x) (Finite x)) [toInteger' a' .. toInteger' b']
+                  ((a', b'), other) = case bounds int of
                     (NegInf, PosInf) -> ((min', max'), [between NegInf min', between max' PosInf])
                     (NegInf, Finite x) -> ((min', Finite x), [between NegInf min'])
                     (Finite x, PosInf) -> ((Finite x, max'), [between max' PosInf])
                     (x, y) -> ((x, y), [])
-              v <- other <> map (\x -> between (Finite x) (Finite x)) [toInteger' a' .. toInteger' b']
-              pure (k, v)
 
           toInteger' (Finite x) = x
           toInteger' _          = error "toInteger' :: Unreachable"
@@ -164,12 +170,15 @@ evalAction = \case
               Dunno      -> Dunno
               Yes        -> Yes
         Not someOp -> do
-          Poset branches <- processB someOp
-          pure . Poset . S.map not $ branches
+          branches <- processB someOp
+          pure $ case branches of
+            Yes -> No
+            No  -> Yes
+            x   -> x
 
       processOp :: OpRel -> Interval -> Interval -> Branches
       processOp op l@(bounds -> (a, b)) r@(bounds -> (c, d))
-        | null l || null r = bottom
+        | null l || null r = Impossible
         | otherwise = case op of
             Lt -> if  | b < c     -> Yes
                       | a >= d    -> No
@@ -189,32 +198,6 @@ evalAction = \case
             Neq -> if | a == b && b == c && c == d -> No
                       | null $ l `infimum` r       -> Yes
                       | otherwise                  -> Dunno
-
--- BRANCHING PATTERNS
-
-type Branches = Poset Bool
-
-pattern Impossible :: Poset Bool
-pattern Impossible <- Poset (S.toList -> [])
-  where
-    Impossible = Poset S.empty
-
-pattern Yes :: Poset Bool
-pattern Yes <- Poset (S.toList -> [True])
-  where
-    Yes = Poset $ S.singleton True
-
-pattern No :: Poset Bool
-pattern No <- Poset (S.toList -> [False])
-  where
-    No = Poset $ S.singleton False
-
-pattern Dunno :: Poset Bool
-pattern Dunno <- Poset (S.toList -> [False, True])
-  where
-    Dunno = Poset $ S.fromList [False, True]
-
-{-# COMPLETE Impossible, Yes, No, Dunno #-}
 
 -- INTERVAL DIVISION
 
@@ -315,8 +298,8 @@ declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . 
 
 -- TODO: Make these not constant
 min', max' :: Int'
-min' = -10
-max' = 10
+min' = -100
+max' = 100
 
 -- | Smart constructor for Intervals bounded between the min and max values.
 between :: Int' -> Int' -> Interval

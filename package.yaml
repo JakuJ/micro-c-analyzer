@@ -32,7 +32,6 @@ default-extensions:
 - LambdaCase
 - MultiParamTypeClasses
 - MultiWayIf
-- PatternSynonyms
 - RankNTypes
 - StandaloneDeriving
 - TupleSections
