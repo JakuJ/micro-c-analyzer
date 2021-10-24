@@ -91,6 +91,7 @@ evalOp op i1 i2 = normalize $ case op of
   Sub  -> i1 - i2
   Mult -> i1 * i2
   Div  -> i1 `idiv` i2
+  Mod  -> i1 `imod` i2
   _    -> top -- TODO: Other operators
 
 evalAction :: Action -> Eval ()
@@ -210,6 +211,52 @@ fromRatioInterval iv = between (toI a) (toI b)
     toI' :: Ratio Integer -> Int'
     toI' (x :% y) = Finite $ x `quot` y
 
+-- INTERVAL MODULO
+
+imod :: Interval -> Interval -> Interval
+imod i1@(bounds -> (a, b)) i2@(bounds -> (m, n))
+  -- (1): empty intervals
+  | null i1 || null i2 = bottom
+  -- (2): compute modulo with positive interval and negate
+  | b < 0 = -imod (-i1) i2
+  -- (3): split into negative and non-negative interval, compute, and join
+  | a < 0 = imod (between a (-1)) i2 `hull` imod (between 0 b) i2
+  -- (4): use the simpler function
+  | m == n = imod1 i1 m
+  -- (5): use only non-negative m and n
+  | n <= 0 = imod i1 (-i2)
+  -- (6): similar to (5), make modulus non-negative
+  | m <= 0 = imod i1 $ between 1 (max (-m) n)
+  -- (7): compare to (4) in mod1, check b-a < |modulus|
+  | b - a >= n = between 0 (n - 1)
+  -- (8): similar to (7), split interval, compute, and join
+  | b - a >= m = between 0 (b - a - 1) `hull` imod i1 (between (b - a + 1) n)
+  -- (9): modulo has no effect
+  | m > b = i1
+  -- (10): there is some overlapping of [a,b] and [n,m]
+  | n > b = between 0 b
+  -- (11): either compute all possibilities and join, or be imprecise
+  | otherwise = between 0 (n - 1) -- imprecise
+
+imod1 :: Interval -> Int' -> Interval
+imod1 x@(bounds -> (a, b)) m
+  -- (1): empty interval or division by zero
+  | m == 0 || null x = bottom
+  -- (2): compute modulo with positive interval and negate
+  | b < 0 = - imod1 (-x) m
+  -- (3): split into negative and non-negative interval, compute and join
+  | a < 0 = imod1 (between a (-1)) m `hull` imod1 (between 0 b) m
+  -- (4): there is no k > 0 such that a < k * m <= b
+  | b - a < abs m && a `erem` m <= b `erem` m = between (a `erem` m) (b `erem` m)
+  -- (5): we can't do better than that
+  | otherwise = between 0 (abs m - 1)
+  where
+    erem :: Int' -> Int' -> Int'
+    erem = curry $ \case
+      (Finite a', Finite m') -> Finite $ a' `rem` m'
+      (infty, Finite _)      -> infty
+      (k, _)                 -> k
+
 -- HELPER FUNCTIONS
 
 -- | Traverse over array declarations and make a `Map` from their names to their sizes.
@@ -218,8 +265,8 @@ declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . 
 
 -- TODO: Make these not constant
 min', max' :: Int'
-min' = -10000
-max' = 10000
+min' = -20000
+max' = 20000
 
 -- | Smart constructor for Intervals bounded between the min and max values.
 between :: Int' -> Int' -> Interval
