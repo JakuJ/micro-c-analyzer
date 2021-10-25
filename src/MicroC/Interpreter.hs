@@ -35,7 +35,9 @@ referTo = \case
   ArrayIndex arr i -> do
     i' <- evalR i
     use $ memory . at (ArrayIndex arr (Literal i')) . non (outOfBounds arr i')
-  lval -> use $ memory . at lval . non 0
+  lval -> do
+    mem <- use memory
+    pure $! mem ^. at lval . non 0
 
 -- | Throw an exception with a message and terminate the program.
 outOfBounds :: Identifier -> Int -> a

@@ -1,3 +1,4 @@
+comment "//" ;
 comment "/*" "*/" ;
 
 Program . Program ::= [Declaration] [Statement] ;

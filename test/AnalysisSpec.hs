@@ -8,6 +8,7 @@ import           ArbitraryInstances                  ()
 import           Common
 import           Control.Monad                       (forM_)
 import           Control.Monad.IO.Class              (liftIO)
+import           Data.IntegerInterval                (member)
 import qualified Data.Map.Lazy                       as M
 import           Data.String.Interpolate             (i)
 import           MicroC.Analysis                     (Analysis (..))
@@ -52,12 +53,7 @@ testIACorrectness = describe "memory after running consistent with Interval Anal
     it [i|#{prog}.c|] $ do
       Right ast <- liftIO $ parseFile [i|sources/#{prog}.c|]
       let pg = toPG ast
-          Union lastState = roundRobin @IA pg M.! (-1)
+          Abs lastState = roundRobin @IA pg M.! (-1)
           mem = fst $ runWithInput ast "42"
       forM_ (M.assocs mem) $ \(lv, v) -> do
-        let id' = lval2ID lv
-        v `shouldSatisfy` inside (lastState M.! id')
-  where
-    inside :: Interval -> Int -> Bool
-    inside Bottom _        = False
-    inside (Between a b) x = a <= Int x && Int x <= b
+        v `shouldSatisfy` (\k -> toInteger k `member` (lastState M.! lval2ID lv))

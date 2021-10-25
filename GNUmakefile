@@ -48,8 +48,9 @@ threadscope:
 # Show memory usage info
 memory:
 	stack build --profile
-	stack exec --profile -- $(EXECUTABLE) +RTS -hd
-	hp2pretty $(EXECUTABLE).hp
+	stack exec --profile -- $(EXECUTABLE) +RTS -hT -L200 -i0.001 -l-au
+	eventlog2html $(EXECUTABLE).eventlog
+	open $(EXECUTABLE).eventlog.html
 
 # Show profiling info
 profiteur:

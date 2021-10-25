@@ -1,111 +1,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module MicroC.Analysis.IntervalAnalysis where
+module MicroC.Analysis.IntervalAnalysis
+( IA
+, AbsMemory(..)
+, idiv
+, between
+) where
 
 import           Control.Lens                        hiding (ix, op)
 import           Control.Monad.State.Lazy
+import           Data.Data.Lens                      (biplate)
+import           Data.IntegerInterval
+import qualified Data.Interval                       as I
 import           Data.Lattice
-import           Data.List                           (intercalate)
+import           Data.List                           (intercalate, nub)
 import qualified Data.Map.Lazy                       as M
 import           Data.Map.Lens                       (toMapOf)
+import           Data.Maybe                          (catMaybes, fromMaybe)
+import           Data.Ratio                          (Ratio, (%))
 import qualified Data.Set                            as S
 import           Data.String.Interpolate             (i)
+import           GHC.Real                            (Ratio ((:%)))
 import           MicroC.AST
 import           MicroC.Analysis
 import           MicroC.Analysis.ReachingDefinitions (getAllNames)
 import           MicroC.ID
 import           MicroC.ProgramGraph
+import           Prelude                             hiding (null)
 
-data Int'
-  = NegInf
-  | Int Int
-  | Inf
-  deriving (Eq)
+-- | Integers extended with negative and positive infinity.
+type Int' = Extended Integer
 
-instance Num Int' where
-  Inf + NegInf      = error [i|Int' :: attempted to add #{Inf} to #{NegInf}|]
-  NegInf + Inf      = error [i|Int' :: attempted to add #{NegInf} to #{Inf}|]
-  NegInf + _        = NegInf
-  _ + NegInf        = NegInf
-  Inf + _           = Inf
-  _ + Inf           = Inf
-  (Int x) + (Int y) = Int $ x + y
-
-  (Int x) * (Int y) = Int $ x * y
-  _ * (Int 0)       = Int 0 -- includes infinities which makes sense for intervals
-  (Int 0) * _       = Int 0 -- (inf * 0 = 0) since inf just means [unknowingly big], but 0 is known
-  NegInf * x        = if signum x == -1 then Inf else NegInf
-  x * NegInf        = NegInf * x
-  Inf * x           = if signum x == -1 then NegInf else Inf
-  x * Inf           = Inf * x
-
-  abs = \case
-    Inf    -> Inf
-    NegInf -> Inf
-    Int n  -> Int $ abs n
-
-  signum = \case
-    Inf    -> Int 1
-    NegInf -> Int (-1)
-    Int n  -> Int $ signum n
-
-  fromInteger = Int . fromInteger
-  negate = \case
-    Inf    -> NegInf
-    NegInf -> Inf
-    Int n  -> Int $ negate n
-
-instance Ord Int' where
-  NegInf <= _        = True
-  _ <= NegInf        = False
-  _ <= Inf           = True
-  Inf <= _           = False
-  (Int a) <= (Int b) = a <= b
-
-instance Bounded Int' where
-  minBound = NegInf
-  maxBound = Inf
-
-instance Show Int' where
-  show Inf     = "∞"
-  show NegInf  = "-∞"
-  show (Int n) = show n
-
--- | The type of an interval between two (potentially infinite) integers.
-data Interval
-  = Bottom
-  | Between Int' Int'
-  deriving (Eq)
-
-makePrisms ''Interval
-
-instance Ord Interval where
-  Bottom      <= _      = True
-  _           <= Bottom = False
-  Between a b <= Between c d
-    | a > b || c > d = error [i|Interval :: One of the intervals is invalid: #{Between a b} and #{Between c d}|]
-    | otherwise = c <= a && b <= d
-
-instance SemiLattice Interval where
-  bottom = Bottom
-  order = (<=)
-  supremum Bottom x                    = x
-  supremum x Bottom                    = x
-  supremum (Between a b) (Between c d) = Between (min a c) (max b d)
-
-instance Lattice Interval where
-  top = Between NegInf Inf
-  infimum (Between a b) (Between c d)
-    | kmin <= kmax = Between kmin kmax
-    | otherwise = Bottom
-      where
-        kmin = max a c
-        kmax = min b d
-  infimum _ _                     = Bottom
-
-instance Show Interval where
-  show Bottom        = "⊥"
-  show (Between a b) = [i|{#{a}..#{b}}|]
+-- | An interval over extended integers.
+type Interval = IntegerInterval
 
 -- | State of the computation.
 data Memory = Memory
@@ -117,149 +44,299 @@ makeLenses ''Memory
 
 type Eval = State Memory
 
--- | An empty data type for instantiating the analysis.
+-- | A data type representing the Inteval analysis.
 data IA
 
-newtype Union = Union (M.Map ID Interval)
+-- | The abstract memory type used in the analysis.
+newtype AbsMemory = Abs (M.Map ID Interval)
   deriving (Eq)
 
-instance SemiLattice Union where
-  bottom = Union M.empty
-  (Union m1) `order` (Union m2)
+instance SemiLattice AbsMemory where
+  bottom = Abs M.empty
+  (Abs m1) `order` (Abs m2)
       = M.foldrWithKey (\k int acc ->
           case M.lookup k m2 of
             Nothing     -> False
             (Just int2) -> acc && int `order` int2) True m1
-  supremum (Union a) (Union b) = Union $ M.unionWith supremum a b
-
-instance Show Union where
-  show (Union (M.assocs -> assocs))
-    = intercalate ", " (map (\(a, b) -> [i|#{a} ∈ #{b}|]) assocs)
+  supremum (Abs a) (Abs b) = Abs $ M.unionWith supremum a b
 
 instance Analysis IA where
-  type Result IA = Union
+  type Result IA = AbsMemory
   direction = Forward
-  initialValue pg = Union $ M.fromDistinctAscList $ map (, Between NegInf Inf) $ S.toAscList (getAllNames pg)
-  analyze pg (_, action, _) (Union results) = Union $ _intervals $ execState (evalAction action) (Memory (declaredArrays pg) results)
+  initialValue pg = Abs $ M.fromDistinctAscList $ map (, top) $ S.toAscList (getAllNames pg)
+  analyze pg (_, action, _) (Abs results) = Abs $ _intervals $ execState (evalAction action) (Memory (declaredArrays pg) results)
+
+-- EVALUATION FUNCTIONS
+
+evalExpr :: RValue 'CInt -> Eval Interval
+evalExpr (Literal x) = pure . normalize . singleton . toInteger $ x
+evalExpr (Reference lv) = case lv of
+  ArrayIndex name ix -> do
+    -- we default to 0 as the size here - for undefined arrays this will cause the range to be bottom every time
+    arrlen <- toInteger <$> use (arrays . at name . non 0)
+    indexRange <- evalExpr ix
+    if indexRange `infimum` between 0 (Finite arrlen - 1) /= bottom
+      -- arrays have to be declared
+      then use (intOf' lv . non bottom)
+      -- array index out of possible bounds
+      else pure bottom
+  -- unknown variables are initialized with garbage
+  _ -> use (intOf' lv . non top)
+evalExpr (OpA left op right) = evalOp op <$> evalExpr left <*> evalExpr right
+
+evalOp :: OpArith -> Interval -> Interval -> Interval
+evalOp _ (null -> True) _ = bottom
+evalOp _ _ (null -> True) = bottom
+evalOp op i1 i2 = normalize $ case op of
+  Add  -> i1 + i2
+  Sub  -> i1 - i2
+  Mult -> i1 * i2
+  Div  -> i1 `idiv` i2
+  Mod  -> i1 `imod` i2
+  _    -> top -- TODO: Other operators
+
+data Branches
+  = Impossible -- {}
+  | No         -- {ff}
+  | Yes        -- {tt}
+  | Dunno      -- {ff, tt}
+  deriving (Eq)
+
+evalAction :: Action -> Eval ()
+evalAction = \case
+  DeclAction   de     -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
+  AssignAction lv rv  -> (lv .==) =<< evalExpr rv
+  ReadAction   lv     -> lv .== top
+  WriteAction  _      -> pure ()
+  BoolAction   action -> do
+    current <- use intervals
+    let usedIDs = nub $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
+        possibilities = mapProduct usedIDs current
+    states <- forM possibilities $ \m -> do
+      withState (intervals .~ m) $ do
+        outcomes <- processB action
+        if outcomes == Yes || outcomes == Dunno
+          then Just <$> use intervals
+          else pure Nothing
+    let (Abs union) = foldr (supremum . Abs) (Abs M.empty) . catMaybes $ states
+    intervals .= union
+    where
+      mapProduct :: [ID] -> M.Map ID Interval -> [M.Map ID Interval]
+      mapProduct ids = map M.fromList . traverse (choose ids) . M.assocs
+        where
+          choose :: [ID] -> (ID, Interval) -> [(ID, Interval)]
+          choose _ (ArrayID a, int) = [(ArrayID a, int)]
+          choose usedIds (k, int)
+            | k `notElem` usedIds = [(k, int)]
+            | otherwise = map (k,) $ filter (`order` int) base
+
+      processB :: RValue 'CBool -> Eval Branches
+      processB = \case
+        Literal True  -> pure Yes
+        Literal False -> pure No
+        OpR l op r -> processOp op <$> evalExpr l <*> evalExpr r
+        OpB l And r -> processB l >>= \case
+          Impossible -> pure Impossible
+          Yes        -> processB r
+          No         -> pure No
+          Dunno      -> processB r <&> \case
+            Impossible -> Impossible
+            No         -> No
+            Dunno      -> Dunno
+            Yes        -> Dunno
+        OpB l Or r        -> processB l >>= \case
+          Impossible -> pure Impossible
+          Yes        -> pure Yes
+          No         -> processB r
+          Dunno      -> processB r <&> \case
+            Impossible -> Impossible
+            No         -> Dunno
+            Dunno      -> Dunno
+            Yes        -> Yes
+        Not someOp -> processB someOp <&> \case
+          Yes -> No
+          No  -> Yes
+          x   -> x
+
+      processOp :: OpRel -> Interval -> Interval -> Branches
+      processOp op l@(bounds -> (a, b)) r@(bounds -> (c, d))
+        | null l || null r = Impossible
+        | otherwise = case op of
+            Lt -> if  | b < c     -> Yes
+                      | a >= d    -> No
+                      | otherwise -> Dunno
+            Gt -> if  | a > d     -> Yes
+                      | b <= c    -> No
+                      | otherwise -> Dunno
+            Le -> if  | b <= c    -> Yes
+                      | a > d     -> No
+                      | otherwise -> Dunno
+            Ge -> if  | a >= d    -> Yes
+                      | b < c     -> No
+                      | otherwise -> Dunno
+            Eq -> if  | a == b && b == c && c == d -> Yes
+                      | null $ l `infimum` r       -> No
+                      | otherwise                  -> Dunno
+            Neq -> if | a == b && b == c && c == d -> No
+                      | null $ l `infimum` r       -> Yes
+                      | otherwise                  -> Dunno
+
+-- INTERVAL DIVISION
+
+idiv :: Interval -> Interval -> Interval
+idiv i1 = fromRatioInterval . I.hulls . map (toRatioInterval i1 *) . inverse . toRatioInterval
+
+inverse :: I.Interval (Ratio Integer) -> [I.Interval (Ratio Integer)]
+inverse iv
+  | iv == 0 = []
+  | 0 `I.notMember` iv = pure $ inv b I.<=..<= inv a
+  | a == 0 = pure $ inv b I.<=..<= 1
+  | b == 0 = pure $ -1 I.<=..<= inv a
+  | otherwise = [-1 I.<=..<= inv a, inv b I.<=..<= 1]
+  where
+    (a, b) = (I.lowerBound iv, I.upperBound iv)
+
+    inv :: Extended (Ratio Integer) -> Extended (Ratio Integer)
+    inv = \case
+      NegInf -> 0
+      PosInf -> 0
+      Finite x -> case x of
+        0 :% k -> Finite (signum k % 1) * PosInf
+        k :% j -> Finite $ j % k
+
+toRatioInterval :: Interval -> I.Interval (Ratio Integer)
+toRatioInterval (bounds -> (a, b)) = ar I.<=..<= br
+  where
+    (ar, br) = (a, b) & each %~ \case
+                                  NegInf   -> NegInf
+                                  PosInf   -> PosInf
+                                  Finite x -> Finite $ x % 1
+
+fromRatioInterval :: I.Interval (Ratio Integer) -> Interval
+fromRatioInterval iv = toI a <=..<= toI b
+  where
+    (a, b) = (I.lowerBound iv, I.upperBound iv)
+
+    toI :: Extended (Ratio Integer) -> Int'
+    toI = \case
+      (Finite x) -> toI' x
+      NegInf     -> NegInf
+      PosInf     -> PosInf
+
+    toI' :: Ratio Integer -> Int'
+    toI' (x :% y) = Finite $ x `quot` y
+
+-- INTERVAL MODULO
+
+imod :: Interval -> Interval -> Interval
+imod i1@(bounds -> (a, b)) i2@(bounds -> (m, n))
+  -- (1): empty intervals
+  | null i1 || null i2 = bottom
+  -- (2): compute modulo with positive interval and negate
+  | b < 0 = -imod (-i1) i2
+  -- (3): split into negative and non-negative interval, compute, and join
+  | a < 0 = imod (a <=..<= (-1)) i2 `hull` imod (0 <=..<= b) i2
+  -- (4): use the simpler function
+  | m == n = imod1 i1 m
+  -- [a, b] nonnegative at this point
+  -- (5): use only non-negative m and n
+  | n <= 0 = imod i1 (-i2)
+  -- (6): similar to (5), make modulus non-negative
+  | m <= 0 = imod i1 $ 1 <=..<= max (-m) n
+  -- [m, n] positive at this point
+  -- (7): compare to (4) in mod1, check b-a < |modulus|
+  | b - a >= n = 0 <=..<= (n - 1)
+  -- (8): similar to (7), split interval, compute, and join
+  | b - a >= m = (0 <=..<= (b - a - 1)) `hull` imod i1 ((b - a + 1) <=..<= n)
+  -- (9): modulo has no effect
+  | m > b = i1
+  -- (10): there is some overlapping of [a,b] and [n,m]
+  | n > b = 0 <=..<= b
+  -- (11): either compute all possibilities and join, or be imprecise
+  | otherwise = 0 <=..<= (n - 1) -- imprecise
+
+imod1 :: Interval -> Int' -> Interval
+imod1 x@(bounds -> (a, b)) m
+  -- (1): empty interval or division by zero
+  | m == 0 || null x = bottom
+  -- (2): compute modulo with positive interval and negate
+  | b < 0 = - imod1 (-x) m
+  -- (3): split into negative and non-negative interval, compute and join
+  | a < 0 = imod1 (a <=..<= (-1)) m `hull` imod1 (0 <=..<= b) m
+  -- (4): there is no k > 0 such that a < k * m <= b
+  | b - a < abs m && a `erem` m <= b `erem` m = (a `erem` m) <=..<= (b `erem` m)
+  -- (5): we can't do better than that
+  | otherwise = 0 <=..<= (abs m - 1)
+  where
+    erem :: Int' -> Int' -> Int'
+    erem = curry $ \case
+      (Finite a', Finite m') -> Finite $ a' `rem` m'
+      (infty, Finite _)      -> infty
+      (k, _)                 -> k
+
+-- HELPER FUNCTIONS
 
 -- | Traverse over array declarations and make a `Map` from their names to their sizes.
 declaredArrays :: PG -> M.Map Identifier Int
 declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . itraversed
 
 -- TODO: Make these not constant
-min', max' :: Int'
-min' = Int (-10000)
-max' = Int 10000
+points :: S.Set Int'
+points = S.fromList . (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 9] ++ [1, 2, 5]
 
-normalizeMin, normalizeMax :: Int' -> Int'
-normalizeMin a
-  | a < min' = NegInf
-  | a > max' = max'
-  | otherwise = a
+base :: [Interval]
+base = do
+  k1 <- NegInf : S.toAscList points
+  k2 <- PosInf : takeWhile (>= k1) (S.toDescList points)
+  guard $ k1 + 1 /= k2
+  guard $ not $ any (\k -> k1 < k && k < k2) points
+  pure $ between k1 k2
 
-normalizeMax b
-  | b > max' = Inf
-  | b < min' = min'
-  | otherwise = b
+-- | Smart constructor for Intervals, normalizes the bounds.
+between :: Int' -> Int' -> Interval
+between a b = a' <=..<= b'
+  where
+    a' = fromMaybe NegInf $ S.lookupLE a points
+    b' = fromMaybe PosInf $ S.lookupGE b points
 
+-- | Interval normalization function.
+normalize :: Interval -> Interval
+normalize a = between (lowerBound a) (upperBound a)
+
+-- | Focuses on the 'Interval' assigned to the provided 'ID' in the abstract memory.
 intOf :: ID -> Lens' Memory (Maybe Interval)
 intOf x = intervals . at x
 
-evalExpr :: RValue 'CInt -> Eval Interval
-evalExpr (Literal (Int -> x)) = pure $ Between (normalizeMin x) (normalizeMax x)
-evalExpr (Reference lv@(lval2ID -> v)) = case lv of
-  ArrayIndex name ix -> do
-    -- we default to 0 as the size here - for undefined arrays this will cause the range to be Bottom every time
-    arrlen <- use (arrays . at name . non 0)
-    indexRange <- evalExpr ix
-    if indexRange `infimum` Between (normalizeMin 0) (normalizeMax (Int arrlen - 1)) /= Bottom
-      -- arrays have to be declared
-      then use (intOf v . non Bottom)
-      -- array index out of possible bounds
-      else pure Bottom
-  -- unknown variables are initialized with garbage
-  _ -> use (intOf v . non top)
-evalExpr (OpA left op right) = evalOp op <$> evalExpr left <*> evalExpr right
+-- | Focuses on the 'Interval' assigned an 'ID' of the provided 'LValue' in the abstract memory.
+intOf' :: LValue 'CInt -> Lens' Memory (Maybe Interval)
+intOf' = intOf . lval2ID
 
-evalOp :: OpArith -> Interval -> Interval -> Interval
-evalOp _ Bottom _ = Bottom
-evalOp _ _ Bottom = Bottom
-evalOp op (Between a1 b1) (Between a2 b2) = case op of
-  Add -> Between (normalizeMin $ a1 + a2) (normalizeMax $ b1 + b2)
-  Sub -> Between (normalizeMin $ a1 - b2) (normalizeMax $ b1 - a2)
-  Mult -> let combos = (*) <$> [a1, b1] <*> [a2, b2]
-          in Between (normalizeMin $ minimum combos) (normalizeMax $ maximum combos)
-  _ -> Between NegInf Inf -- TODO: Other operators
+-- | Assign a new interval to an 'LValue' in the abstract memory.
+--   Variables and records are overwritten, arrays are extended with `supremum`.
+(.==) :: LValue 'CInt -> Interval -> Eval ()
+lv .== r = case lv of
+  ArrayIndex _ _ -> intOf' lv %= fmap (supremum r)
+  _              -> intOf' lv .= Just r
 
-evalAction :: Action -> Eval ()
-evalAction = \case
-  DeclAction   de                 -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
-  AssignAction (lval2ID -> lv) rv -> case lv of
-    -- amalgamated arrays - we don't know which element changed
-    ArrayID _ -> do
-      rval <- evalExpr rv
-      intOf lv %= fmap (supremum rval)
-    -- anything else - we know for sure we changed the entire value
-    _         -> intOf lv <~ Just <$> evalExpr rv
-  ReadAction   (lval2ID -> lv)    -> intOf lv .= Just top
-  WriteAction  _                  -> pure ()
-  BoolAction   action             -> processB action
+bounds :: Interval -> (Int', Int')
+bounds x = (lowerBound x, upperBound x)
+
+-- INSTANCES
+
+instance Show AbsMemory where
+  show (Abs (M.assocs -> assocs))
+    = intercalate ", " (map (\(a, b) -> [i|#{a} #{pprint b}|]) assocs)
     where
-      processB :: RValue 'CBool -> Eval ()
-      processB = \case
-        Literal True  -> pure ()
-        Literal False -> intervals %= M.map (const Bottom)
-        OpR (Reference _) _ (Reference _) -> pure ()
-        OpR l op r@(Reference _)          -> evalAction $ BoolAction $ OpR r (flipRelation op) l
-        OpR l@(Reference (lval2ID -> ref)) op r -> do
-          li <- evalExpr l
-          ri <- evalExpr r
-          case op of
-            Lt  -> intOf ref .= Just (infimum li (extendLeft (ri & _Between . both -~ 1)))
-            Gt  -> intOf ref .= Just (infimum li (extendRight (ri & _Between . both +~ 1)))
-            Le  -> intOf ref .= Just (infimum li (extendLeft ri))
-            Ge  -> intOf ref .= Just (infimum li (extendRight ri))
-            Eq  -> intOf ref .= Just (infimum li ri)
-            Neq -> case (li, ri) of
-              -- if we have [a, a] != [a, a], then we have unreachable code
-              (Between a a', Between a'' a''') | a == a' && a' == a'' && a'' == a''' ->
-                intOf ref .= Just Bottom
-              -- only if we have something like x in [2, 5] != 2 or != 5, then we can conclude x in [3, 5] or [2, 4]
-              -- doesn't work with infinities
-              (Between a b, Between x x') | x == x' && a /= NegInf && b /= Inf ->
-                intOf ref .= Just (if | a == x -> Between (a + 1) b
-                                      | b == x -> Between a (b - 1)
-                                      | otherwise -> Between a b)
-              _ -> pure ()
-        OpR {}            -> pure ()
-        OpB l And r       -> processB l >> processB r
-        OpB _ Or _        -> pure ()
-        Not (OpR a op b)  -> processB (OpR a (inverseRelation op) b)
-        Not (OpB a And b) -> processB $ OpB (Not a) Or (Not b)
-        Not (OpB a Or b)  -> processB $ OpB (Not a) And (Not b)
-        Not (Not b)       -> processB b
-        Not (Literal b)   -> processB $ Literal (not b)
-
-      extendLeft, extendRight :: Interval -> Interval
-      extendLeft Bottom        = Bottom
-      extendLeft (Between _ x) = Between NegInf x
-
-      extendRight Bottom        = Bottom
-      extendRight (Between x _) = Between x Inf
-
-      inverseRelation, flipRelation :: OpRel -> OpRel
-      inverseRelation = \case
-        Lt  -> Ge
-        Le  -> Gt
-        Ge  -> Lt
-        Gt  -> Le
-        Eq  -> Neq
-        Neq -> Eq
-
-      flipRelation = \case
-        Lt  -> Gt
-        Gt  -> Lt
-        Ge  -> Le
-        Le  -> Ge
-        Eq  -> Eq
-        Neq -> Neq
+      pprint :: Interval -> String
+      pprint iv
+        | null iv = "∈ {}"
+        | isSingleton iv = "= " <> pprint' (lowerBound iv)
+        | otherwise = case (lowerBound iv, upperBound iv) of
+          (NegInf, PosInf) -> ": any"
+          (NegInf, x)      -> [i|<= #{pprint' x}|]
+          (x, PosInf)      -> [i|>= #{pprint' x}|]
+          (a, b)           -> [i|∈ { #{pprint' a}..#{pprint' b} }|]
+      pprint' :: Int' -> String
+      pprint' (Finite x) = show x
+      pprint' NegInf     = "-∞"
+      pprint' PosInf     = "∞"

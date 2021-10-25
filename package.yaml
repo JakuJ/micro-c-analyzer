@@ -15,6 +15,8 @@ dependencies:
 - array # required by BNFC
 - base >= 4.7 && < 5
 - containers
+- data-interval
+- extended-reals
 - lens
 - mtl
 - string-interpolate

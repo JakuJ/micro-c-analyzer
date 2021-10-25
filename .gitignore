@@ -1,3 +1,4 @@
+.DS_Store
 .stack-work/
 *~
 Grammar/
@@ -10,4 +11,5 @@ src/Grammar/
 *.ps
 *.aux
 *.prof.html
+*.eventlog.html
 *.svg

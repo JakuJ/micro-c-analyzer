@@ -28,6 +28,7 @@ runWithInput program = runWriter . runReaderT (unTest (evalProgram program))
 programs :: [String]
 programs =  [ "arr_range"
             , "dangerEven"
+            , "division"
             , "even"
             , "factorial"
             , "faint"
@@ -39,6 +40,7 @@ programs =  [ "arr_range"
             , "pos_avg"
             , "precedence"
             , "records"
+            , "sum_arr"
             ]
 
 -- | Returns a list of program graphs of the example programs from the "sources" folder.
