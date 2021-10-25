@@ -11,4 +11,5 @@ src/Grammar/
 *.ps
 *.aux
 *.prof.html
+*.eventlog.html
 *.svg

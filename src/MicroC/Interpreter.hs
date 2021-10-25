@@ -35,7 +35,9 @@ referTo = \case
   ArrayIndex arr i -> do
     i' <- evalR i
     use $ memory . at (ArrayIndex arr (Literal i')) . non (outOfBounds arr i')
-  lval -> use $ memory . at lval . non 0
+  lval -> do
+    mem <- use memory
+    pure $! mem ^. at lval . non 0
 
 -- | Throw an exception with a message and terminate the program.
 outOfBounds :: Identifier -> Int -> a
@@ -72,7 +74,6 @@ evalDecl (RecordDecl name fs) = do
   forM_ fs $ \f -> memory . at (FieldAccess name f) .= Just 0
 
 -- Statements
--- TODO: Fix memory leak
 evalStat :: MonadEval m => Statement -> Env m ()
 evalStat (Assignment lval rval) = (memory . at lval) <~ Just <$> evalR rval
 evalStat (RecordAssignment i rs) = do
