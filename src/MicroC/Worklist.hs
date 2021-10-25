@@ -1,71 +1,64 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module MicroC.Worklist where
 
+import           Control.Lens
+import           Control.Monad.State
+import           Data.Lattice
 import qualified Data.Map            as M
 import           MicroC.Analysis
 import           MicroC.ProgramGraph
-import Control.Monad.State
-import Control.Lens
-import Data.Lattice
+
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
 type Solution m = M.Map StateNum (Result m)
 
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
 type WorklistAlgorithm m = Analysis m => PG -> Solution m
 
-data Memory w m = Memory {
-  _wl     :: w,
-  _output :: Solution m
-}
+data Memory w m = Memory
+  { _wl     :: w
+  , _output :: Solution m
+  }
 
 makeLenses ''Memory
 
-class Worklist t s where
-  empty :: t s
-  insert :: s -> t s -> t s
-  extract :: t s -> Maybe (s, t s)
+class Worklist f where
+  empty :: f a
+  insert :: a -> f a -> f a
+  extract :: f a -> Maybe (a, f a)
 
-worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
-worklist pg = _output $ flip execState (Memory (empty @w @StateNum) M.empty) $ do
+worklist :: forall m w. (Worklist w, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
+worklist pg = _output $ execState go $ Memory empty M.empty
+  where
+    go :: State (Memory (w StateNum) m) ()
+    go = do
+      -- Initialize all states in the output to the bottom value
+      forM_ (allStates pg) $ \q -> do
+        output . at q .= Just bottom
+        wl %= insert q
 
-  -- Initialize all states in the output to the bottom value
-  forM_ (allStates pg) $ \s -> do
-    output . at s .= Just bottom
-    wl %= insert s
+      -- Initial constraint for 0 (first state in Forward analyses)
+      output . at 0 .= Just (initialValue @m pg)
 
-  let s0 = if direction @m == Forward then 0 else -1
+      whileM' (uses wl (/= empty)) $ do
+        q0 <- extract'
 
-  output . at s0 .= Just (initialValue @m pg)
+        let edges = filter (\(q, _, _) -> q == q0) pg
+        forM_ edges $ \e@(q, _, q') -> do
+          -- get current solution for q and q'
+          aq <- use (output . at q . non bottom)
+          aq' <- use (output . at q' . non bottom)
 
-  let pred' :: State (Memory (w StateNum) m ) Bool
-      pred' = do
-        w <- use wl
-        return $ w /= empty
+          -- calculate left side of the constraint
+          let leftSide = analyze @m pg e aq
+              satisfied = leftSide `order` aq'
 
-  whileM' pred' $ do
-    q0 <- extract'
-
-    let qs = filter (\(q, _, _) -> q == q0) pg
-
-    forM_ qs $ \e -> do
-      -- get order of states (reversed for backward problems)
-      let (q0', qe) = stateOrder @m e
-
-      -- get current solution for q and q'
-      aq0 <- use (output . at q0' . non bottom)
-      aqe <- use (output . at qe . non bottom)
-
-      -- calculate left side of the constraint
-      let leftSide = analyze @m pg e aq0
-          satisfied = leftSide `order` aqe
-          
-      unless satisfied $ do
-        output . at qe .= Just (aqe `supremum` leftSide)
-        wl %= insert qe
+          unless satisfied $ do
+            output . at q' .= Just (aq' `supremum` leftSide)
+            wl %= insert q'
 
 whileM' :: Monad m => m Bool -> m () -> m ()
 whileM' pred' body = do
@@ -74,7 +67,7 @@ whileM' pred' body = do
     body
     whileM' pred' body
 
-extract' :: forall m w. Worklist w StateNum =>  State (Memory (w StateNum) m ) StateNum
+extract' :: forall m w. Worklist w => State (Memory (w StateNum) m ) StateNum
 extract' = do
   w <- use wl
   let Just (x, w') = extract w

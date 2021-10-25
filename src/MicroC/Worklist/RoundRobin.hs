@@ -2,13 +2,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module MicroC.Worklist.RoundRobin
-( Solution
-, WorklistAlgorithm
-, roundRobin
+( roundRobin
 ) where
 
 import           Control.Monad.State.Lazy
-import           Data.Lattice             (SemiLattice (..))
+import           Data.Lattice
 import qualified Data.Map.Lazy            as M
 import           Data.Set                 (singleton, (\\))
 import           MicroC.Analysis          (Analysis (..), Direction (..))
