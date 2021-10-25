@@ -1,64 +1,82 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts #-}
 
-module MicroC.Worklist
-( Solution
-, WorklistAlgorithm
-, roundRobin
-) where
+module MicroC.Worklist where
 
-import           Control.Monad.State.Lazy
-import           Data.Lattice             (SemiLattice (..))
-import qualified Data.Map.Lazy            as M
-import           Data.Set                 (singleton, (\\))
-import           MicroC.Analysis          (Analysis (..), Direction (..))
-import           MicroC.ProgramGraph      (PG, StateNum, allStates)
-
+import qualified Data.Map            as M
+import           MicroC.Analysis
+import           MicroC.ProgramGraph
+import Control.Monad.State
+import Control.Lens
+import Data.Lattice
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
 type Solution m = M.Map StateNum (Result m)
 
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
 type WorklistAlgorithm m = Analysis m => PG -> Solution m
 
--- | An implementation of the Round Robin worklist algorithm.
-roundRobin :: forall m. WorklistAlgorithm m
-roundRobin pg = flip execState M.empty $ do
-  -- all states except the first one
+data Memory w m = Memory {
+  _wl     :: w,
+  _output :: Solution m
+}
+
+makeLenses ''Memory
+
+class Worklist t s where
+  empty :: t s
+  insert :: s -> t s -> t s
+  extract :: t s -> Maybe (s, t s)
+
+worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
+worklist pg = _output $ flip execState (Memory (empty @w @StateNum) M.empty) $ do
+
+  -- Initialize all states in the output to the bottom value
+  forM_ (allStates pg) $ \s -> do
+    output . at s .= Just bottom
+    wl %= insert s
+
   let s0 = if direction @m == Forward then 0 else -1
-      qq = allStates pg \\ singleton s0
 
-  -- set bottom value to all states
-  forM_ qq $ \s -> modify (M.insert s bottom)
+  output . at s0 .= Just (initialValue @m pg)
 
-  -- set initial value to state s0
-  modify (M.insert s0 (initialValue @m pg))
+  let pred' :: State (Memory (w StateNum) m ) Bool
+      pred' = do
+        w <- use wl
+        return $ w /= empty
 
-  -- iterate until False is returned for every element
-  whileM $ anyM pg $ \e -> do
-    -- get order of states (reversed for backward problems)
-    let (q, q') = stateOrder @m e
-    -- get current solution for q and q'
-    aq <- gets (M.! q)
-    aq' <- gets (M.! q')
-    -- calculate left side of the constraint
-    let leftSide = analyze @m pg e aq
-        satisfied = leftSide `order` aq'
-    if not satisfied then do
-      -- if not satisfied, we set update the solution for state q'
-      modify $ M.insert q' (supremum aq' leftSide)
-      -- and indicate something has changed
-      pure True
-    else
-      pure False
+  whileM' pred' $ do
+    q0 <- extract'
 
--- HELPER FUNCTIONS
+    let qs = filter (\(q, _, _) -> q == q0) pg
 
--- | Check if any element of a list maps to `True` under a monadic predicate.
-anyM :: Monad m => [a] -> (a -> m Bool) -> m Bool
-anyM xs p = or <$> mapM p xs
+    forM_ qs $ \e -> do
+      -- get order of states (reversed for backward problems)
+      let (q0', qe) = stateOrder @m e
 
--- | Repeat a monadic computation until it returns `False`.
-whileM :: Monad m => m Bool -> m ()
-whileM expr = do
-  cond <- expr
-  when cond $ whileM expr
+      -- get current solution for q and q'
+      aq0 <- use (output . at q0' . non bottom)
+      aqe <- use (output . at qe . non bottom)
+
+      -- calculate left side of the constraint
+      let leftSide = analyze @m pg e aq0
+          satisfied = leftSide `order` aqe
+          
+      unless satisfied $ do
+        output . at qe .= Just (aqe `supremum` leftSide)
+        wl %= insert qe
+
+whileM' :: Monad m => m Bool -> m () -> m ()
+whileM' pred' body = do
+  cond <- pred'
+  when cond $ do
+    body
+    whileM' pred' body
+
+extract' :: forall m w. Worklist w StateNum =>  State (Memory (w StateNum) m ) StateNum
+extract' = do
+  w <- use wl
+  let Just (x, w') = extract w
+  wl .= w'
+  return x

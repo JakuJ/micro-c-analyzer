@@ -12,7 +12,7 @@ import           MicroC.Analysis.IntervalAnalysis (IA)
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
-import           MicroC.Worklist                  (roundRobin)
+import           MicroC.Worklist                  
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)

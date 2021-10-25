@@ -44,6 +44,9 @@ library
       MicroC.Parser
       MicroC.ProgramGraph
       MicroC.Worklist
+      MicroC.Worklist.Queue
+      MicroC.Worklist.RoundRobin
+      MicroC.Worklist.Stack
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:
