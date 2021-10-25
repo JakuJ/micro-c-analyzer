@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# LANGUAGE FlexibleInstances #-}
 module MicroC.Analysis.DetectionOfSigns
 ( DS
@@ -18,9 +17,6 @@ import           MicroC.ProgramGraph
 
 
 data Sign = Minus | Zero | Plus
-  deriving (Eq, Ord)
-
-data BoolSign = Tt | Ff
   deriving (Eq, Ord)
 
 -- | An empty data type for instantiating the analysis.
@@ -65,7 +61,7 @@ instance Analysis DS where
     AssignAction (AST.ArrayIndex a i) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
     ReadAction lval -> State $ M.insert (lval2ID lval) (Poset (S.fromList [Minus, Zero, Plus])) result
-    BoolAction rval -> foldr (\ s1 s2 -> s1 `supremum` s2) (State M.empty) $ filter (\ s -> (Poset (S.singleton Tt)) `order` (boolSign rval s)) (basic (State result))
+    BoolAction rval -> foldr (\ s1 s2 -> s1 `supremum` s2) (State M.empty) $ filter (\ s -> (Poset (S.singleton True)) `order` (boolSign rval s)) (basic (State result))
     _ -> State result
 
 
@@ -79,6 +75,7 @@ arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeti
                                                                   else Poset S.empty
 arithmeticSign (Reference x) (State state) = state M.!  lval2ID x
 arithmeticSign (OpA left  op right) (State state) =  absOpA op (arithmeticSign left (State state)) (arithmeticSign right (State state))
+arithmeticSign _ _ = Poset (S.fromList [Minus, Zero, Plus])
 
 absOpA :: OpArith -> Poset Sign -> Poset Sign -> Poset Sign
 absOpA op (Poset left) (Poset right) = case op of
@@ -87,6 +84,7 @@ absOpA op (Poset left) (Poset right) = case op of
   Mult ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMult leftSign rightSign) (S.cartesianProduct left right)) S.empty
   Div ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absDiv leftSign rightSign) (S.cartesianProduct left right)) S.empty
   Mod -> Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMod leftSign rightSign) (S.cartesianProduct left right)) S.empty
+  _ -> Poset (S.fromList [Minus, Zero, Plus]) -- BitAnd and BitOr 
 
 absPlus :: Sign -> Sign -> S.Set Sign
 absPlus s1 s2 = case s1 of
@@ -132,32 +130,29 @@ absMod Plus Minus  = S.fromList [Zero, Plus]
 
 
 
-boolSign :: RValue 'CBool -> State -> Poset BoolSign
-boolSign (Literal b) _ = if b then Poset (S.singleton Tt) else  Poset (S.singleton Ff)
+boolSign :: RValue 'CBool -> State -> Poset Bool
+boolSign (Literal b) _  = Poset (S.singleton b)
 boolSign (OpB left  op right) (State state) = absOpB op (boolSign left (State state)) (boolSign right (State state))
 boolSign (OpR left  op right) (State state) = absOpR op (arithmeticSign left (State state)) (arithmeticSign right (State state))
 boolSign (Not rval) (State state) = absNot  (boolSign rval (State state))
 
 
-absNot :: Poset BoolSign -> Poset BoolSign
-absNot (Poset bSigns) = Poset $ S.map (\ sign -> if sign == Tt then Ff else Tt) bSigns
+absNot :: Poset Bool -> Poset Bool
+absNot (Poset bSigns) = Poset $ S.map not bSigns
 
-
-absOpB :: OpBool -> Poset BoolSign -> Poset BoolSign -> Poset BoolSign
+absOpB :: OpBool -> Poset Bool -> Poset Bool -> Poset Bool
 absOpB op (Poset left) (Poset right) = case op of
   And -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absAnd leftBool rightBool) (S.cartesianProduct left right)) S.empty
   Or -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absOr leftBool rightBool) (S.cartesianProduct left right)) S.empty
 
-absAnd :: BoolSign -> BoolSign -> S.Set BoolSign
-absAnd Tt Tt = S.singleton Tt
-absAnd _ _   = S.singleton Ff
+absAnd :: Bool -> Bool -> S.Set Bool
+absAnd b1 b2  = S.singleton (b1 && b2)
 
-absOr :: BoolSign -> BoolSign -> S.Set BoolSign
-absOr Ff Ff = S.singleton Ff
-absOr _ _   = S.singleton Tt
+absOr :: Bool -> Bool -> S.Set Bool
+absOr b1 b2 = S.singleton (b1 || b2)
 
 
-absOpR :: OpRel  -> Poset Sign -> Poset Sign -> Poset BoolSign
+absOpR :: OpRel  -> Poset Sign -> Poset Sign -> Poset Bool
 absOpR op (Poset left) (Poset right) = case op of
   Lt -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absLt leftBool rightBool) (S.cartesianProduct left right)) S.empty
   Gt -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absGt leftBool rightBool) (S.cartesianProduct left right)) S.empty
@@ -167,63 +162,63 @@ absOpR op (Poset left) (Poset right) = case op of
   Neq -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absNeq leftBool rightBool) (S.cartesianProduct left right)) S.empty
 
 
-absLt :: Sign -> Sign -> S.Set BoolSign
-absLt Minus Minus = S.fromList [Tt, Ff]
-absLt Minus Plus  = S.singleton Tt
-absLt Minus Zero  = S.singleton Tt
-absLt Zero Zero   = S.singleton Ff
-absLt Zero Minus  = S.singleton Ff
-absLt Zero Plus   = S.singleton Tt
-absLt Plus Plus   =  S.fromList [Tt, Ff]
-absLt Plus Zero   =  S.singleton Ff
-absLt Plus Minus  =  S.singleton Ff
+absLt :: Sign -> Sign -> S.Set Bool
+absLt Minus Minus = S.fromList [True, False]
+absLt Minus Plus  = S.singleton True
+absLt Minus Zero  = S.singleton True
+absLt Zero Zero   = S.singleton False
+absLt Zero Minus  = S.singleton False
+absLt Zero Plus   = S.singleton True
+absLt Plus Plus   =  S.fromList [True, False]
+absLt Plus Zero   =  S.singleton False
+absLt Plus Minus  =  S.singleton False
 
-absGt :: Sign -> Sign -> S.Set BoolSign
-absGt Minus Minus = S.fromList [Tt, Ff]
-absGt Minus Plus  = S.singleton Ff
-absGt Minus Zero  = S.singleton Ff
-absGt Zero Zero   = S.singleton Ff
-absGt Zero Minus  = S.singleton Tt
-absGt Zero Plus   = S.singleton Ff
-absGt Plus Plus   =  S.fromList [Tt, Ff]
-absGt Plus Zero   =  S.singleton Tt
-absGt Plus Minus  =  S.singleton Tt
+absGt :: Sign -> Sign -> S.Set Bool
+absGt Minus Minus = S.fromList [True, False]
+absGt Minus Plus  = S.singleton False
+absGt Minus Zero  = S.singleton False
+absGt Zero Zero   = S.singleton False
+absGt Zero Minus  = S.singleton True
+absGt Zero Plus   = S.singleton False
+absGt Plus Plus   =  S.fromList [True, False]
+absGt Plus Zero   =  S.singleton True
+absGt Plus Minus  =  S.singleton True
 
-absLe :: Sign -> Sign -> S.Set BoolSign
-absLe Minus Minus = S.fromList [Tt, Ff]
-absLe Minus Plus  = S.singleton Tt
-absLe Minus Zero  = S.singleton Tt
-absLe Zero Zero   = S.singleton Tt
-absLe Zero Minus  = S.singleton Ff
-absLe Zero Plus   = S.singleton Tt
-absLe Plus Plus   =  S.fromList [Tt, Ff]
-absLe Plus Zero   =  S.singleton Ff
-absLe Plus Minus  =  S.singleton Ff
-
-
-absGe :: Sign -> Sign -> S.Set BoolSign
-absGe Minus Minus = S.fromList [Tt, Ff]
-absGe Minus Plus  = S.singleton Ff
-absGe Minus Zero  = S.singleton Ff
-absGe Zero Zero   = S.singleton Tt
-absGe Zero Minus  = S.singleton Tt
-absGe Zero Plus   = S.singleton Ff
-absGe Plus Plus   =  S.fromList [Tt, Ff]
-absGe Plus Zero   =  S.singleton Tt
-absGe Plus Minus  =  S.singleton Tt
-
-absEq :: Sign -> Sign -> S.Set BoolSign
-absEq Zero Zero = S.singleton Tt
-absEq Zero _    = S.singleton Ff
-absEq _ Zero    = S.singleton Ff
-absEq _ _       = S.fromList [Tt, Ff]
+absLe :: Sign -> Sign -> S.Set Bool
+absLe Minus Minus = S.fromList [True, False]
+absLe Minus Plus  = S.singleton True
+absLe Minus Zero  = S.singleton True
+absLe Zero Zero   = S.singleton True
+absLe Zero Minus  = S.singleton False
+absLe Zero Plus   = S.singleton True
+absLe Plus Plus   =  S.fromList [True, False]
+absLe Plus Zero   =  S.singleton False
+absLe Plus Minus  =  S.singleton False
 
 
-absNeq :: Sign -> Sign -> S.Set BoolSign
-absNeq Zero Zero = S.singleton Ff
-absNeq Zero _    = S.singleton Tt
-absNeq _ Zero    = S.singleton Tt
-absNeq _ _       = S.fromList [Tt, Ff]
+absGe :: Sign -> Sign -> S.Set Bool
+absGe Minus Minus = S.fromList [True, False]
+absGe Minus Plus  = S.singleton False
+absGe Minus Zero  = S.singleton False
+absGe Zero Zero   = S.singleton True
+absGe Zero Minus  = S.singleton True
+absGe Zero Plus   = S.singleton False
+absGe Plus Plus   =  S.fromList [True, False]
+absGe Plus Zero   =  S.singleton True
+absGe Plus Minus  =  S.singleton True
+
+absEq :: Sign -> Sign -> S.Set Bool
+absEq Zero Zero = S.singleton True
+absEq Zero _    = S.singleton False
+absEq _ Zero    = S.singleton False
+absEq _ _       = S.fromList [True, False]
+
+
+absNeq :: Sign -> Sign -> S.Set Bool
+absNeq Zero Zero = S.singleton False
+absNeq Zero _    = S.singleton True
+absNeq _ Zero    = S.singleton True
+absNeq _ _       = S.fromList [True, False]
 
 
 
