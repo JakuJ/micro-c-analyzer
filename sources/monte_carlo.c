@@ -4,7 +4,7 @@ int i;
 int inside;
 int seed;
 
-iters := 1000000;
+iters := 10000;
 
 /* generator parameters */
 a := 1103515245;

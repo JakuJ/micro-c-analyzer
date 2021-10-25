@@ -72,6 +72,7 @@ evalDecl (RecordDecl name fs) = do
   forM_ fs $ \f -> memory . at (FieldAccess name f) .= Just 0
 
 -- Statements
+-- TODO: Fix memory leak
 evalStat :: MonadEval m => Statement -> Env m ()
 evalStat (Assignment lval rval) = (memory . at lval) <~ Just <$> evalR rval
 evalStat (RecordAssignment i rs) = do

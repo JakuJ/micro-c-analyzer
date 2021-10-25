@@ -16,7 +16,7 @@ import           Data.Lattice
 import           Data.List                           (intercalate, nub)
 import qualified Data.Map.Lazy                       as M
 import           Data.Map.Lens                       (toMapOf)
-import           Data.Maybe                          (catMaybes)
+import           Data.Maybe                          (catMaybes, fromMaybe)
 import           Data.Ratio                          (Ratio, (%))
 import qualified Data.Set                            as S
 import           Data.String.Interpolate             (i)
@@ -135,36 +135,28 @@ evalAction = \case
         Literal True  -> pure Yes
         Literal False -> pure No
         OpR l op r -> processOp op <$> evalExpr l <*> evalExpr r
-        OpB l And r   -> do
-          l' <- processB l
-          r' <- processB r
-          case l' of
-            Impossible -> pure Impossible
-            Yes -> pure r'
-            No -> pure No
-            Dunno -> pure $ case r' of
-              Impossible -> Impossible
-              No         -> No
-              Dunno      -> Dunno
-              Yes        -> Dunno
-        OpB l Or r        -> do
-          l' <- processB l
-          r' <- processB r
-          case l' of
-            Impossible -> pure Impossible
-            Yes -> pure Yes
-            No -> pure r'
-            Dunno -> pure $ case r' of
-              Impossible -> Impossible
-              No         -> Dunno
-              Dunno      -> Dunno
-              Yes        -> Yes
-        Not someOp -> do
-          branches <- processB someOp
-          pure $ case branches of
-            Yes -> No
-            No  -> Yes
-            x   -> x
+        OpB l And r -> processB l >>= \case
+          Impossible -> pure Impossible
+          Yes        -> processB r
+          No         -> pure No
+          Dunno      -> processB r <&> \case
+            Impossible -> Impossible
+            No         -> No
+            Dunno      -> Dunno
+            Yes        -> Dunno
+        OpB l Or r        -> processB l >>= \case
+          Impossible -> pure Impossible
+          Yes        -> pure Yes
+          No         -> processB r
+          Dunno      -> processB r <&> \case
+            Impossible -> Impossible
+            No         -> Dunno
+            Dunno      -> Dunno
+            Yes        -> Yes
+        Not someOp -> processB someOp <&> \case
+          Yes -> No
+          No  -> Yes
+          x   -> x
 
       processOp :: OpRel -> Interval -> Interval -> Branches
       processOp op l@(bounds -> (a, b)) r@(bounds -> (c, d))
@@ -289,13 +281,13 @@ declaredArrays :: PG -> M.Map Identifier Int
 declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . itraversed
 
 -- TODO: Make these not constant
-points :: [Int']
-points = (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 9] ++ [1, 5]
+points :: S.Set Int'
+points = S.fromList . (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 9] ++ [1, 2, 5]
 
 base :: [Interval]
 base = do
-  k1 <- NegInf : points
-  k2 <- PosInf : filter (>= k1) points
+  k1 <- NegInf : S.toAscList points
+  k2 <- PosInf : takeWhile (>= k1) (S.toDescList points)
   guard $ k1 + 1 /= k2
   guard $ not $ any (\k -> k1 < k && k < k2) points
   pure $ between k1 k2
@@ -304,8 +296,8 @@ base = do
 between :: Int' -> Int' -> Interval
 between a b = a' <=..<= b'
   where
-    a' = maximum . filter (<= a) $ NegInf : points
-    b' = minimum . filter (>= b) $ PosInf : points
+    a' = fromMaybe NegInf $ S.lookupLE a points
+    b' = fromMaybe PosInf $ S.lookupGE b points
 
 -- | Interval normalization function.
 normalize :: Interval -> Interval
