@@ -13,7 +13,7 @@ import           Data.Data.Lens                      (biplate)
 import           Data.IntegerInterval
 import qualified Data.Interval                       as I
 import           Data.Lattice
-import           Data.List                           (intercalate)
+import           Data.List                           (intercalate, nub)
 import qualified Data.Map.Lazy                       as M
 import           Data.Map.Lens                       (toMapOf)
 import           Data.Maybe                          (catMaybes)
@@ -105,12 +105,12 @@ data Branches
 evalAction :: Action -> Eval ()
 evalAction = \case
   DeclAction   de     -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
-  AssignAction lv rv  -> lv <~~ evalExpr rv
+  AssignAction lv rv  -> (lv .==) =<< evalExpr rv
   ReadAction   lv     -> lv .== top
   WriteAction  _      -> pure ()
   BoolAction   action -> do
     current <- use intervals
-    let usedIDs = map lval2ID (action ^.. biplate :: [LValue 'CInt])
+    let usedIDs = nub $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
         possibilities = mapProduct usedIDs current
     states <- forM possibilities $ \m -> do
       withState (intervals .~ m) $ do
@@ -128,17 +128,7 @@ evalAction = \case
           choose _ (ArrayID a, int) = [(ArrayID a, int)]
           choose usedIds (k, int)
             | k `notElem` usedIds = [(k, int)]
-            | otherwise = map (k,) basics
-                where
-                  basics = other <> map (\x -> between (Finite x) (Finite x)) [toInteger' a' .. toInteger' b']
-                  ((a', b'), other) = case bounds int of
-                    (NegInf, PosInf) -> ((min', max'), [between NegInf min', between max' PosInf])
-                    (NegInf, Finite x) -> ((min', Finite x), [between NegInf min'])
-                    (Finite x, PosInf) -> ((Finite x, max'), [between max' PosInf])
-                    (x, y) -> ((x, y), [])
-
-          toInteger' (Finite x) = x
-          toInteger' _          = error "toInteger' :: Unreachable"
+            | otherwise = map (k,) $ filter (`order` int) base
 
       processB :: RValue 'CBool -> Eval Branches
       processB = \case
@@ -231,7 +221,7 @@ toRatioInterval (bounds -> (a, b)) = ar I.<=..<= br
                                   Finite x -> Finite $ x % 1
 
 fromRatioInterval :: I.Interval (Ratio Integer) -> Interval
-fromRatioInterval iv = between (toI a) (toI b)
+fromRatioInterval iv = toI a <=..<= toI b
   where
     (a, b) = (I.lowerBound iv, I.upperBound iv)
 
@@ -253,23 +243,25 @@ imod i1@(bounds -> (a, b)) i2@(bounds -> (m, n))
   -- (2): compute modulo with positive interval and negate
   | b < 0 = -imod (-i1) i2
   -- (3): split into negative and non-negative interval, compute, and join
-  | a < 0 = imod (between a (-1)) i2 `hull` imod (between 0 b) i2
+  | a < 0 = imod (a <=..<= (-1)) i2 `hull` imod (0 <=..<= b) i2
   -- (4): use the simpler function
   | m == n = imod1 i1 m
+  -- [a, b] nonnegative at this point
   -- (5): use only non-negative m and n
   | n <= 0 = imod i1 (-i2)
   -- (6): similar to (5), make modulus non-negative
-  | m <= 0 = imod i1 $ between 1 (max (-m) n)
+  | m <= 0 = imod i1 $ 1 <=..<= max (-m) n
+  -- [m, n] positive at this point
   -- (7): compare to (4) in mod1, check b-a < |modulus|
-  | b - a >= n = between 0 (n - 1)
+  | b - a >= n = 0 <=..<= (n - 1)
   -- (8): similar to (7), split interval, compute, and join
-  | b - a >= m = between 0 (b - a - 1) `hull` imod i1 (between (b - a + 1) n)
+  | b - a >= m = (0 <=..<= (b - a - 1)) `hull` imod i1 ((b - a + 1) <=..<= n)
   -- (9): modulo has no effect
   | m > b = i1
   -- (10): there is some overlapping of [a,b] and [n,m]
-  | n > b = between 0 b
+  | n > b = 0 <=..<= b
   -- (11): either compute all possibilities and join, or be imprecise
-  | otherwise = between 0 (n - 1) -- imprecise
+  | otherwise = 0 <=..<= (n - 1) -- imprecise
 
 imod1 :: Interval -> Int' -> Interval
 imod1 x@(bounds -> (a, b)) m
@@ -278,11 +270,11 @@ imod1 x@(bounds -> (a, b)) m
   -- (2): compute modulo with positive interval and negate
   | b < 0 = - imod1 (-x) m
   -- (3): split into negative and non-negative interval, compute and join
-  | a < 0 = imod1 (between a (-1)) m `hull` imod1 (between 0 b) m
+  | a < 0 = imod1 (a <=..<= (-1)) m `hull` imod1 (0 <=..<= b) m
   -- (4): there is no k > 0 such that a < k * m <= b
-  | b - a < abs m && a `erem` m <= b `erem` m = between (a `erem` m) (b `erem` m)
+  | b - a < abs m && a `erem` m <= b `erem` m = (a `erem` m) <=..<= (b `erem` m)
   -- (5): we can't do better than that
-  | otherwise = between 0 (abs m - 1)
+  | otherwise = 0 <=..<= (abs m - 1)
   where
     erem :: Int' -> Int' -> Int'
     erem = curry $ \case
@@ -297,22 +289,23 @@ declaredArrays :: PG -> M.Map Identifier Int
 declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . itraversed
 
 -- TODO: Make these not constant
-min', max' :: Int'
-min' = -100
-max' = 100
+points :: [Int']
+points = (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 9] ++ [1, 5]
 
--- | Smart constructor for Intervals bounded between the min and max values.
+base :: [Interval]
+base = do
+  k1 <- NegInf : points
+  k2 <- PosInf : filter (>= k1) points
+  guard $ k1 + 1 /= k2
+  guard $ not $ any (\k -> k1 < k && k < k2) points
+  pure $ between k1 k2
+
+-- | Smart constructor for Intervals, normalizes the bounds.
 between :: Int' -> Int' -> Interval
 between a b = a' <=..<= b'
   where
-    a'
-      | a < min' = NegInf
-      | a > max' = max'
-      | otherwise = a
-    b'
-      | b > max' = PosInf
-      | b < min' = min'
-      | otherwise = b
+    a' = maximum . filter (<= a) $ NegInf : points
+    b' = minimum . filter (>= b) $ PosInf : points
 
 -- | Interval normalization function.
 normalize :: Interval -> Interval
@@ -333,10 +326,6 @@ lv .== r = case lv of
   ArrayIndex _ _ -> intOf' lv %= fmap (supremum r)
   _              -> intOf' lv .= Just r
 
--- | A version of '.==' that takes a monadic argument.
-(<~~) :: LValue 'CInt -> Eval Interval -> Eval ()
-(<~~) lv = ((lv .==) =<<)
-
 bounds :: Interval -> (Int', Int')
 bounds x = (lowerBound x, upperBound x)
 
@@ -351,11 +340,10 @@ instance Show AbsMemory where
         | null iv = "∈ {}"
         | isSingleton iv = "= " <> pprint' (lowerBound iv)
         | otherwise = case (lowerBound iv, upperBound iv) of
-          (NegInf, PosInf)     -> ": any"
-          (NegInf, x)          -> [i|<= #{pprint' x}|]
-          (x, PosInf)          -> [i|>= #{pprint' x}|]
-          (Finite a, Finite b) -> [i|∈ { #{a}..#{b} }|]
-          _                    -> error $ "Invalid interval: " <> show iv
+          (NegInf, PosInf) -> ": any"
+          (NegInf, x)      -> [i|<= #{pprint' x}|]
+          (x, PosInf)      -> [i|>= #{pprint' x}|]
+          (a, b)           -> [i|∈ { #{pprint' a}..#{pprint' b} }|]
       pprint' :: Int' -> String
       pprint' (Finite x) = show x
       pprint' NegInf     = "-∞"

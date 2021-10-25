@@ -4,7 +4,7 @@ module IntervalSpec (spec) where
 
 import           Control.Exception                (evaluate)
 import           Data.ExtendedReal
-import           Data.IntegerInterval             (member)
+import           Data.IntegerInterval             (member, (<=..<=))
 import           MicroC.Analysis.IntervalAnalysis
 import           Test.Hspec
 import           Test.Hspec.QuickCheck            (prop)
@@ -59,12 +59,12 @@ spec = parallel $ do
       let fi = Finite i
           fj = Finite j
       in
-        (i `quot` j) `member` (between fi fi `idiv` between fj fj)
+        (i `quot` j) `member` ((fi <=..<= fi) `idiv` (fj <=..<= fj))
 
   it "interval division" $ do
-    (between 0 100 `idiv` 5) `shouldBe` between 0 20
-    (between (-300) 200 `idiv` 5) `shouldBe` between (-60) 40
-    (between (-200) 0 `idiv` 5) `shouldBe` between (-40) 0
-    (between (-100) 300 `idiv` between (-3) 5) `shouldBe` between (-300) 300
-    (between (-100) 300 `idiv` between (-5) (-3)) `shouldBe` between (-100) 33
-    (between (-100) 300 `idiv` between 3 5) `shouldBe` between (-33) 100
+    ((0 <=..<= 100) `idiv` 5) `shouldBe` (0 <=..<= 20)
+    ((-300 <=..<= 200) `idiv` 5) `shouldBe` (-60 <=..<= 40)
+    ((-200 <=..<= 0) `idiv` 5) `shouldBe` (-40 <=..<= 0)
+    ((-100 <=..<= 300) `idiv` ((-3) <=..<= 5)) `shouldBe` (-300 <=..<= 300)
+    ((-100 <=..<= 300) `idiv` (-5 <=..<= (-3))) `shouldBe` (-100 <=..<= 33)
+    ((-100 <=..<= 300) `idiv` (3 <=..<= 5)) `shouldBe` (-33 <=..<= 100)
