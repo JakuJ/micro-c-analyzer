@@ -20,6 +20,7 @@ dependencies:
 - lens
 - mtl
 - string-interpolate
+- deque
 
 default-extensions:
 - DataKinds
