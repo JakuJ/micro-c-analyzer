@@ -48,7 +48,7 @@ threadscope:
 # Show memory usage info
 memory:
 	stack build --profile
-	stack exec --profile -- $(EXECUTABLE) +RTS -hT -L200 -i0.001 -l-au
+	stack exec --profile -- $(EXECUTABLE) +RTS -hy -L200 -i0.001 -l-au
 	eventlog2html $(EXECUTABLE).eventlog
 	open $(EXECUTABLE).eventlog.html
 

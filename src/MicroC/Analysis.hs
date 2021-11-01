@@ -28,10 +28,8 @@ class SemiLattice (Result m) => Analysis m where
   stateOrder :: Edge -> (StateNum, StateNum)
   -- ^ The order of states in constraints, either `forward` or `backward`.
 
-  default direction :: Direction
   direction = Forward
 
-  default stateOrder :: Edge -> (StateNum, StateNum)
   stateOrder = case direction @m of
     Forward  -> forward
     Backward -> backward

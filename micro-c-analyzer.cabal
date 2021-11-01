@@ -44,6 +44,10 @@ library
       MicroC.Parser
       MicroC.ProgramGraph
       MicroC.Worklist
+      MicroC.Worklist.ChaoticIteration
+      MicroC.Worklist.Queue
+      MicroC.Worklist.RoundRobin
+      MicroC.Worklist.Stack
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:
@@ -73,6 +77,7 @@ library
     , base >=4.7 && <5
     , containers
     , data-interval
+    , deque
     , extended-reals
     , lens
     , mtl
@@ -110,6 +115,7 @@ executable micro-c-analyzer-exe
     , base >=4.7 && <5
     , containers
     , data-interval
+    , deque
     , extended-reals
     , lens
     , micro-c-analyzer
@@ -158,6 +164,7 @@ test-suite micro-c-analyzer-test
     , base >=4.7 && <5
     , containers
     , data-interval
+    , deque
     , extended-reals
     , generic-random
     , hspec

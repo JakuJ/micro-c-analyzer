@@ -282,7 +282,7 @@ declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . 
 
 -- TODO: Make these not constant
 points :: S.Set Int'
-points = S.fromList . (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 9] ++ [1, 2, 5]
+points = S.fromList . (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 3] ++ [1, 2, 5]
 
 base :: [Interval]
 base = do

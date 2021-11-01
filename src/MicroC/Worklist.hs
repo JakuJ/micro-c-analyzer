@@ -1,18 +1,16 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
-module MicroC.Worklist
-( Solution
-, WorklistAlgorithm
-, roundRobin
-) where
+module MicroC.Worklist where
 
-import           Control.Monad.State.Lazy
-import           Data.Lattice             (SemiLattice (..))
-import qualified Data.Map.Lazy            as M
-import           Data.Set                 (singleton, (\\))
-import           MicroC.Analysis          (Analysis (..), Direction (..))
-import           MicroC.ProgramGraph      (PG, StateNum, allStates)
+import           Control.Lens
+import           Control.Monad.State
+import           Data.Lattice
+import qualified Data.Map            as M
+import           MicroC.Analysis
+import           MicroC.ProgramGraph
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
 type Solution m = M.Map StateNum (Result m)
@@ -20,45 +18,58 @@ type Solution m = M.Map StateNum (Result m)
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
 type WorklistAlgorithm m = Analysis m => PG -> Solution m
 
--- | An implementation of the Round Robin worklist algorithm.
-roundRobin :: forall m. WorklistAlgorithm m
-roundRobin pg = flip execState M.empty $ do
-  -- all states except the first one
-  let s0 = if direction @m == Forward then 0 else -1
-      qq = allStates pg \\ singleton s0
+data Memory w m = Memory
+  { _wl     :: w
+  , _output :: Solution m
+  }
 
-  -- set bottom value to all states
-  forM_ qq $ \s -> modify (M.insert s bottom)
+makeLenses ''Memory
 
-  -- set initial value to state s0
-  modify (M.insert s0 (initialValue @m pg))
+class Worklist f a where
+  empty :: f a
+  insert :: a -> f a -> f a
+  extract :: f a -> Maybe (a, f a)
 
-  -- iterate until False is returned for every element
-  whileM $ anyM pg $ \e -> do
-    -- get order of states (reversed for backward problems)
-    let (q, q') = stateOrder @m e
-    -- get current solution for q and q'
-    aq <- gets (M.! q)
-    aq' <- gets (M.! q')
-    -- calculate left side of the constraint
-    let leftSide = analyze @m pg e aq
-        satisfied = leftSide `order` aq'
-    if not satisfied then do
-      -- if not satisfied, we set update the solution for state q'
-      modify $ M.insert q' (supremum aq' leftSide)
-      -- and indicate something has changed
-      pure True
-    else
-      pure False
+worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
+worklist pg = _output $ execState go $ Memory empty M.empty
+  where
+    go :: State (Memory (w StateNum) m) ()
+    go = do
+      -- Initialize all states in the output to the bottom value
+      forM_ (allStates pg) $ \q -> do
+        output . at q .= Just bottom
+        wl %= insert q
 
--- HELPER FUNCTIONS
+      -- Initial constraint for 0 (first state in Forward analyses)
+      output . at 0 .= Just (initialValue @m pg)
 
--- | Check if any element of a list maps to `True` under a monadic predicate.
-anyM :: Monad m => [a] -> (a -> m Bool) -> m Bool
-anyM xs p = or <$> mapM p xs
+      whileM' (uses wl (/= empty)) $ do
+        q0 <- extract'
 
--- | Repeat a monadic computation until it returns `False`.
-whileM :: Monad m => m Bool -> m ()
-whileM expr = do
-  cond <- expr
-  when cond $ whileM expr
+        let edges = filter (\(q, _, _) -> q == q0) pg
+        forM_ edges $ \e@(q, _, q') -> do
+          -- get current solution for q and q'
+          aq <- use (output . at q . non bottom)
+          aq' <- use (output . at q' . non bottom)
+
+          -- calculate left side of the constraint
+          let leftSide = analyze @m pg e aq
+              satisfied = leftSide `order` aq'
+
+          unless satisfied $ do
+            output . at q' .= Just (aq' `supremum` leftSide)
+            wl %= insert q'
+
+whileM' :: Monad m => m Bool -> m () -> m ()
+whileM' pred' body = do
+  cond <- pred'
+  when cond $ do
+    body
+    whileM' pred' body
+
+extract' :: forall m w. Worklist w StateNum => State (Memory (w StateNum) m ) StateNum
+extract' = do
+  w <- use wl
+  let Just (x, w') = extract w
+  wl .= w'
+  return x
