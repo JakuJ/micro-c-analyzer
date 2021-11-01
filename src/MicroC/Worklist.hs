@@ -31,8 +31,11 @@ class Worklist f a where
   extract :: f a -> Maybe (a, f a)
 
 worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
-worklist pg = _output $ execState go $ Memory empty M.empty
+worklist forwardPG = _output $ execState go $ Memory empty M.empty
   where
+    pg :: PG
+    pg = if direction @m == Forward then forwardPG else map (\(a, b, c) -> (c, b, a)) forwardPG
+
     go :: State (Memory (w StateNum) m) ()
     go = do
       -- Initialize all states in the output to the bottom value

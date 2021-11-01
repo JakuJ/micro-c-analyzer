@@ -52,16 +52,15 @@ testAnalysis graphs name = describe name $ do
     let pg = toPG prog
         solution = roundRobin @m pg
     silence (print solution) `shouldReturn` ()
-  when (direction @m == Forward) $ do
-    it "different worklist algos return the same results" $ do
-      forM_ graphs $ \pg -> do
-        let solRR = roundRobin @m pg
-            solStack = worklist @m @Stack pg
-            solQueue = worklist @m @Queue pg
-            solChaotic = worklist @m @Chaotic pg
-        solStack `shouldBe` solQueue
-        solStack `shouldBe` solChaotic
-        solStack `shouldBe` solRR
+  it "different worklist algos return the same results" $ do
+    forM_ graphs $ \pg -> do
+      let solRR = roundRobin @m pg
+          solStack = worklist @m @Stack pg
+          solQueue = worklist @m @Queue pg
+          solChaotic = worklist @m @Chaotic pg
+      solRR `shouldBe` solStack
+      solRR `shouldBe` solQueue
+      solRR `shouldBe` solChaotic
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do

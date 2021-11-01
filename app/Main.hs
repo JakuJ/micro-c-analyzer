@@ -14,7 +14,6 @@ import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
 import           MicroC.Worklist
 import           MicroC.Worklist.RoundRobin
-import           MicroC.Worklist.Stack
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -23,7 +22,7 @@ instance MonadEval IOEval where
   evalRead = liftIO readLn
   evalWrite = IOEval . print
 
-analyseFile :: forall m. (Analysis m, Eq (Result m), Show (Result m)) => FilePath -> IO ()
+analyseFile :: forall m. (Analysis m, Show (Result m)) => FilePath -> IO ()
 analyseFile path = do
   prog <- parseFile $ "sources/" <> path <> ".c"
   case prog of
