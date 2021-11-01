@@ -1,25 +1,25 @@
 {-# LANGUAGE FlexibleInstances #-}
+
 module MicroC.Analysis.DetectionOfSigns
 ( DS
 ) where
+
 import           Data.Lattice
-import           Data.List
+import           Data.List                           (intercalate)
 import qualified Data.Map                            as M
 import qualified Data.Set                            as S
 import           Data.String.Interpolate
+import           Debug.Trace
 import           MicroC.AST                          hiding (Variable)
 import qualified MicroC.AST                          as AST
 import           MicroC.Analysis
 import           MicroC.Analysis.ReachingDefinitions (getAllNames)
 import           MicroC.ID
 import           MicroC.ProgramGraph
-import Debug.Trace
-import Data.Maybe
-
 
 
 data Sign = Minus | Zero | Plus
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Enum)
 
 -- | An empty data type for instantiating the analysis.
 data DS
@@ -44,13 +44,6 @@ instance SemiLattice State where
           Nothing       -> False
           (Just signs2) -> acc && signs1 `order` signs2) True m1
   supremum (State a) (State b) = State $ M.unionWith supremum a b
-
-
-instance Lattice (Poset Sign) where
-  infimum (Poset s1) (Poset s2) = Poset $ S.intersection s1 s2
-  top = Poset $ S.fromList [Plus, Zero, Minus]
-
-
 
 instance Analysis DS where
   type Result DS = State
@@ -89,7 +82,7 @@ absOpA op (Poset left) (Poset right) = case op of
   Mult ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMult leftSign rightSign) (S.cartesianProduct left right)) S.empty
   Div ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absDiv leftSign rightSign) (S.cartesianProduct left right)) S.empty
   Mod -> Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMod leftSign rightSign) (S.cartesianProduct left right)) S.empty
-  _ -> Poset (S.fromList [Minus, Zero, Plus]) -- BitAnd and BitOr 
+  _ -> Poset (S.fromList [Minus, Zero, Plus]) -- BitAnd and BitOr
 
 absPlus :: Sign -> Sign -> S.Set Sign
 absPlus s1 s2 = case s1 of

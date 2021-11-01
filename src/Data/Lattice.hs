@@ -4,9 +4,8 @@ module Data.Lattice
 , Poset(..)
 ) where
 
-import qualified Data.Set        as S
-import Data.List (intercalate)
 import qualified Data.IntegerInterval as I
+import           Data.List            (intercalate)
 import qualified Data.Set             as S
 
 class SemiLattice a where
@@ -20,9 +19,6 @@ class SemiLattice a => Lattice a where
 
 newtype Poset a = Poset (S.Set a)
   deriving (Eq)
-
-instance Show a => Show (Poset a) where
-  show (Poset s) = "{" <> intercalate ", " (S.toList (S.map show s)) <> "}"
 
 instance Show a => Show (Poset a) where
   show (Poset s) = "{" <> intercalate ", " (S.toList (S.map show s)) <> "}"

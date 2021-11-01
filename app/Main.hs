@@ -8,8 +8,7 @@ import           Control.Monad                    (forM_, void)
 import           Control.Monad.IO.Class           (MonadIO (..))
 import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
-import           MicroC.Analysis.IntervalAnalysis (IA)
-import           MicroC.Analysis.LiveVariables    (LV)
+import           MicroC.Analysis.DetectionOfSigns (DS)
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
@@ -31,7 +30,7 @@ analyseFile path = do
     Left errs -> mapM_ putStrLn errs
     Right ast -> do
       let pg = toPG ast
-          solution = worklist @m @Stack pg
+          solution = roundRobin @m pg
       putStrLn "AST:"
       print ast
       putStrLn "PG:"
@@ -47,4 +46,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @IA "even"
+main = analyseFile @DS "pos_avg"
