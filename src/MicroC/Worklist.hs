@@ -13,7 +13,12 @@ import           MicroC.Analysis
 import           MicroC.ProgramGraph
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
-data Solution m = Solution (M.Map StateNum (Result m)) Int
+data Solution m = Solution
+  { _solution :: M.Map StateNum (Result m)
+  , _iterations    :: Int
+  }
+
+makeLenses ''Solution
 
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
 type WorklistAlgorithm m = Analysis m => PG -> Solution m
@@ -31,14 +36,18 @@ class Worklist f a where
   insert :: a -> f a -> f a
   extract :: f a -> Maybe (a, f a)
 
-worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
-worklist forwardPG = Solution (mem ^. output)  (mem ^. iters) 
+type Go w m = State (Memory (w StateNum) m)
+
+worklist :: forall m w. (Worklist w StateNum, Eq (Result m)) => WorklistAlgorithm m
+worklist forwardPG = Solution (mem ^. output)  (mem ^. iters)
   where
+    mem :: Memory (w StateNum) m
     mem = execState go $ Memory empty M.empty 0
+
     pg :: PG
     pg = if direction @m == Forward then forwardPG else map (\(a, b, c) -> (c, b, a)) forwardPG
 
-    go :: State (Memory (w StateNum) m) ()
+    go :: Go w m ()
     go = do
       -- Initialize all states in the output to the bottom value
       forM_ (allStates pg) $ \q -> do
@@ -48,8 +57,7 @@ worklist forwardPG = Solution (mem ^. output)  (mem ^. iters)
       -- Initial constraint for 0 (first state in Forward analyses)
       output . at 0 .= Just (initialValue @m pg)
 
-      whileM' (uses wl (/= empty)) $ do
-        q0 <- extract'
+      whileWL $ \q0 -> do
 
         let edges = filter (\(q, _, _) -> q == q0) pg
         forM_ edges $ \e@(q, _, q') -> do
@@ -66,16 +74,16 @@ worklist forwardPG = Solution (mem ^. output)  (mem ^. iters)
             output . at q' .= Just (aq' `supremum` leftSide)
             wl %= insert q'
 
-whileM' :: Monad m => m Bool -> m () -> m ()
-whileM' pred' body = do
-  cond <- pred'
-  when cond $ do
-    body
-    whileM' pred' body
+whileWL :: (Analysis m, Worklist w StateNum) => (StateNum -> Go w m ()) -> Go w m ()
+whileWL process = do
+  st <- extract'
+  case st of
+    Nothing  -> pure ()
+    Just st' -> process st' >> whileWL process
 
-extract' :: forall m w. Worklist w StateNum => State (Memory (w StateNum) m ) StateNum
+extract' :: Worklist w StateNum => Go w m (Maybe StateNum)
 extract' = do
   w <- use wl
-  let Just (x, w') = extract w
-  wl .= w'
-  return x
+  case extract w of
+    Nothing      -> pure Nothing
+    Just (x, w') -> wl .= w' >> pure (Just x)

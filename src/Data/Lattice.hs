@@ -29,7 +29,7 @@ instance Ord a => SemiLattice (Poset a) where
   supremum (Poset a) (Poset b) = Poset $ a `S.union` b
 
 instance (Ord a, Bounded a, Enum a) => Lattice (Poset a) where
-  top = Poset $ S.fromList $ enumFrom minBound
+  top = Poset . S.fromList $ enumFrom minBound
   infimum (Poset a) (Poset b) = Poset $ S.intersection a b
 
 instance SemiLattice I.IntegerInterval where

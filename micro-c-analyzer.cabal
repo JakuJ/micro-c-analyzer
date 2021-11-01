@@ -71,7 +71,7 @@ library
       TypeFamilyDependencies
       ViewPatterns
       QuasiQuotes
-  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -O2 -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
       array
     , base >=4.7 && <5
@@ -109,7 +109,7 @@ executable micro-c-analyzer-exe
       TypeFamilyDependencies
       ViewPatterns
       QuasiQuotes
-  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -O2 -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
     , base >=4.7 && <5
@@ -157,7 +157,7 @@ test-suite micro-c-analyzer-test
       TypeFamilyDependencies
       ViewPatterns
       QuasiQuotes
-  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-orphans
+  ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -O2 -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-orphans
   build-depends:
       QuickCheck
     , array

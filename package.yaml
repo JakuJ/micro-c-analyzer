@@ -48,6 +48,7 @@ ghc-options:
   - -fprof-auto
   - -fno-prof-count-entries
   # optimization
+  - -O2
   - -flate-dmd-anal
   - -flate-specialise
   # warnings
@@ -65,7 +66,6 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
-    - -O2
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
