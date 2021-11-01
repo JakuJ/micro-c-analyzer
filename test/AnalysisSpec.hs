@@ -13,6 +13,7 @@ import qualified Data.Map.Lazy                       as M
 import           Data.String.Interpolate             (i)
 import           MicroC.Analysis
 import           MicroC.Analysis.DangerousVariables  (DV)
+import           MicroC.Analysis.DetectionOfSigns    (DS)
 import           MicroC.Analysis.FaintVariables      (FV)
 import           MicroC.Analysis.IntervalAnalysis
 import           MicroC.Analysis.LiveVariables       (LV)
@@ -36,6 +37,7 @@ spec = do
   testAnalysis @DV graphs "Dangerous Variables"
   testAnalysis @LV graphs "Live Variables"
   testAnalysis @FV graphs "Faint Variables"
+  testAnalysis @DS graphs "Detection of Signs"
   testAnalysis @IA graphs "Interval Analysis"
 
   testIACorrectness

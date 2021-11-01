@@ -5,6 +5,7 @@ module Data.Lattice
 ) where
 
 import qualified Data.IntegerInterval as I
+import           Data.List            (intercalate)
 import qualified Data.Set             as S
 
 class SemiLattice a where
@@ -17,15 +18,18 @@ class SemiLattice a => Lattice a where
   infimum :: a -> a -> a
 
 newtype Poset a = Poset (S.Set a)
-  deriving (Eq, Show) via S.Set a
+  deriving (Eq)
+
+instance Show a => Show (Poset a) where
+  show (Poset s) = "{" <> intercalate ", " (S.toList (S.map show s)) <> "}"
 
 instance Ord a => SemiLattice (Poset a) where
   bottom = Poset S.empty
   Poset a `order` Poset b = a `S.isSubsetOf` b
   supremum (Poset a) (Poset b) = Poset $ a `S.union` b
 
-instance (Ord a, Enum a) => Lattice (Poset a) where
-  top = Poset $ S.fromList $ enumFrom (toEnum minBound)
+instance (Ord a, Bounded a, Enum a) => Lattice (Poset a) where
+  top = Poset $ S.fromList $ enumFrom minBound
   infimum (Poset a) (Poset b) = Poset $ S.intersection a b
 
 instance SemiLattice I.IntegerInterval where
