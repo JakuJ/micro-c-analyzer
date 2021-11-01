@@ -1,12 +1,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module MicroC.Analysis.DetectionOfSigns
-( DS
-) where
+module MicroC.Analysis.DetectionOfSigns where
+-- ( DS
+-- ) where
 
+import           Control.Lens                        ((^..))
+import           Data.Data.Lens                      (biplate)
 import           Data.Lattice
 import           Data.List                           (intercalate)
 import qualified Data.Map                            as M
+import           Data.Maybe                          (fromMaybe)
 import qualified Data.Set                            as S
 import           Data.String.Interpolate
 import           MicroC.AST                          hiding (Variable)
@@ -51,7 +54,7 @@ instance Analysis DS where
   type Result DS = State
   direction = Forward
   initialValue pg = State $ M.fromList $ map (, top) $ S.toList (getAllNames pg)
-  analyze pg (_, action, _) (State result) = case action of
+  analyze _ (_, action, _) (State result) = case action of
     DeclAction (VariableDecl x) -> State $ M.insert (VariableID x) (only Zero) result
     DeclAction (ArrayDecl _ a) -> State $ M.insert (ArrayID a) (only Zero) result
     DeclAction (RecordDecl r fields) -> State $ foldr (\field acc -> M.insert (FieldID r field) (only Zero) acc) result fields
@@ -59,11 +62,11 @@ instance Analysis DS where
     AssignAction (AST.ArrayIndex a _) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
     ReadAction lval -> State $ M.insert (lval2ID lval) top result
-    BoolAction rval -> foldr supremum everythingBottom
-                      $ filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State result)
+    BoolAction rval -> foldr supremum bottom
+                      $ filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result)
+      where
+        usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
     _ -> State result
-    where
-      everythingBottom = let State full = initialValue @DS pg in State $ M.map (const bottom) full
 
 
 arithmeticSign :: RValue 'CInt -> State -> Poset Sign
@@ -71,14 +74,15 @@ arithmeticSign (Literal x) _
   | x > 0 = Poset (S.singleton Plus)
   | x == 0 = Poset (S.singleton Zero)
   | x < 0 = Poset (S.singleton Minus)
-arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeticSign rval (State state) `infimum` Poset (S.fromList [Zero, Plus])) /= Poset S.empty
+arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeticSign rval (State state) `infimum` Poset (S.fromList [Zero, Plus])) /= bottom
                                                                   -- then fromMaybe bottom $ M.lookup (ArrayID a) state
-                                                                  then state M.! ArrayID a
-                                                                  else Poset S.empty
--- arithmeticSign (Reference x) (State state) = fromMaybe bottom $ M.lookup (lval2ID x) state
-arithmeticSign (Reference x) (State state) =  state M.! lval2ID x
-arithmeticSign (OpA left  op right) (State state) =  absOpA op (arithmeticSign left (State state)) (arithmeticSign right (State state))
-arithmeticSign _ _ = Poset (S.fromList [Minus, Zero, Plus])
+                                                                  then fromMaybe bottom $ M.lookup (ArrayID a) state
+                                                                  else bottom
+-- arithmeticSign (Reference x) (State state) = fromMaybe (error $ show x <> " is not in the map") $ M.lookup (lval2ID x) state
+arithmeticSign (Reference x) (State state) = fromMaybe bottom $ M.lookup (lval2ID x) state
+-- arithmeticSign (Reference x) (State state) = state M.! lval2ID x
+arithmeticSign (OpA left op right) (State state) = absOpA op (arithmeticSign left (State state)) (arithmeticSign right (State state))
+arithmeticSign _ _ = top
 
 absOpA :: OpArith -> Poset Sign -> Poset Sign -> Poset Sign
 absOpA op (Poset left) (Poset right) = case op of
@@ -87,7 +91,7 @@ absOpA op (Poset left) (Poset right) = case op of
   Mult ->  Poset $ foldMap S.union  (S.map  (uncurry absMult) (S.cartesianProduct left right)) S.empty
   Div ->  Poset $ foldMap S.union  (S.map  (uncurry absDiv) (S.cartesianProduct left right)) S.empty
   Mod -> Poset $ foldMap S.union  (S.map  (uncurry absMod) (S.cartesianProduct left right)) S.empty
-  _ -> Poset (S.fromList [Minus, Zero, Plus]) -- BitAnd and BitOr
+  _ -> top -- BitAnd and BitOr
 
 absPlus :: Sign -> Sign -> S.Set Sign
 absPlus s1 s2 = case s1 of
@@ -223,15 +227,11 @@ absNeq Zero _    = S.singleton True
 absNeq _ Zero    = S.singleton True
 absNeq _ _       = S.fromList [True, False]
 
-
-
 mapProduct :: M.Map ID (Poset Sign) -> [M.Map ID (Poset Sign)]
 mapProduct = map (M.fromList . posetify) . mapM choose . M.assocs
   where
     choose :: (a, Poset b) -> [(a, b)]
-    choose (k, Poset vs) = do
-      v <- S.toList vs
-      pure (k, v)
+    choose (k, Poset vs) = [(k, v) | v <- S.toList vs]
 
     posetify :: [(ID, Sign)] -> [(ID, Poset Sign)]
     posetify = map (fmap (Poset . S.singleton))

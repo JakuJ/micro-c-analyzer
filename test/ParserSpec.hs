@@ -9,7 +9,7 @@ import           MicroC.Parser           (parseFile, parseProgram)
 import           Test.Hspec
 
 spec :: Spec
-spec = parallel $ do
+spec = do
   it "undefined record" $ parseProgram "read R.fst;" `shouldSatisfy` isLeft
   it "undefined field" $ parseProgram "{int fst; int snd} R; read R.aaa;" `shouldSatisfy` isLeft
   it "too many fields" $ parseProgram "{int fst; int snd} R; R := (1, 2, 3);" `shouldSatisfy` isLeft
