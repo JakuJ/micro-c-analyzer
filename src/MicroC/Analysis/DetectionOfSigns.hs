@@ -9,7 +9,6 @@ import           Data.List                           (intercalate)
 import qualified Data.Map                            as M
 import qualified Data.Set                            as S
 import           Data.String.Interpolate
-import           Debug.Trace
 import           MicroC.AST                          hiding (Variable)
 import qualified MicroC.AST                          as AST
 import           MicroC.Analysis
@@ -19,7 +18,7 @@ import           MicroC.ProgramGraph
 
 
 data Sign = Minus | Zero | Plus
-  deriving (Eq, Ord, Enum)
+  deriving (Eq, Ord, Bounded, Enum)
 
 -- | An empty data type for instantiating the analysis.
 data DS
@@ -45,20 +44,26 @@ instance SemiLattice State where
           (Just signs2) -> acc && signs1 `order` signs2) True m1
   supremum (State a) (State b) = State $ M.unionWith supremum a b
 
+only :: Sign -> Poset Sign
+only = Poset . S.singleton
+
 instance Analysis DS where
   type Result DS = State
   direction = Forward
-  initialValue pg = State $ M.fromList $ map (\ v -> (v, Poset (S.fromList [Minus, Zero, Plus]))) $ S.toList $ (getAllNames pg)
-  analyze _ (_, action, _) (State result) = traceShow result $ case action of
-    DeclAction (VariableDecl x) -> State $ M.insert (VariableID x) (Poset (S.singleton Zero)) result
-    DeclAction (ArrayDecl _ a) -> State $ M.insert (ArrayID a) (Poset (S.singleton Zero)) result
-    DeclAction (RecordDecl r fields) -> State $ foldr (\ field acc -> M.insert (FieldID r field) (Poset (S.singleton Zero)) acc) result fields
-    AssignAction (AST.ArrayIndex a i) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
+  initialValue pg = State $ M.fromList $ map (, top) $ S.toList (getAllNames pg)
+  analyze pg (_, action, _) (State result) = case action of
+    DeclAction (VariableDecl x) -> State $ M.insert (VariableID x) (only Zero) result
+    DeclAction (ArrayDecl _ a) -> State $ M.insert (ArrayID a) (only Zero) result
+    DeclAction (RecordDecl r fields) -> State $ foldr (\field acc -> M.insert (FieldID r field) (only Zero) acc) result fields
+    -- TODO: Bounds check
+    AssignAction (AST.ArrayIndex a _) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
-    ReadAction lval -> State $ M.insert (lval2ID lval) (Poset (S.fromList [Minus, Zero, Plus])) result
-    BoolAction rval -> foldr supremum (State M.empty)
-                      $  filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ (basic (State result))
+    ReadAction lval -> State $ M.insert (lval2ID lval) top result
+    BoolAction rval -> foldr supremum everythingBottom
+                      $ filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State result)
     _ -> State result
+    where
+      everythingBottom = let State full = initialValue @DS pg in State $ M.map (const bottom) full
 
 
 arithmeticSign :: RValue 'CInt -> State -> Poset Sign
@@ -71,17 +76,17 @@ arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeti
                                                                   then state M.! ArrayID a
                                                                   else Poset S.empty
 -- arithmeticSign (Reference x) (State state) = fromMaybe bottom $ M.lookup (lval2ID x) state
-arithmeticSign (Reference x) (State state) =  state M.! (lval2ID (traceShowId x))
+arithmeticSign (Reference x) (State state) =  state M.! lval2ID x
 arithmeticSign (OpA left  op right) (State state) =  absOpA op (arithmeticSign left (State state)) (arithmeticSign right (State state))
 arithmeticSign _ _ = Poset (S.fromList [Minus, Zero, Plus])
 
 absOpA :: OpArith -> Poset Sign -> Poset Sign -> Poset Sign
 absOpA op (Poset left) (Poset right) = case op of
-  Add ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absPlus leftSign rightSign) (S.cartesianProduct left right)) S.empty
-  Sub ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMinus leftSign rightSign) (S.cartesianProduct left right)) S.empty
-  Mult ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMult leftSign rightSign) (S.cartesianProduct left right)) S.empty
-  Div ->  Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absDiv leftSign rightSign) (S.cartesianProduct left right)) S.empty
-  Mod -> Poset $ foldMap S.union  (S.map  (\ (leftSign, rightSign) -> absMod leftSign rightSign) (S.cartesianProduct left right)) S.empty
+  Add ->  Poset $ foldMap S.union  (S.map  (uncurry absPlus) (S.cartesianProduct left right)) S.empty
+  Sub ->  Poset $ foldMap S.union  (S.map  (uncurry absMinus) (S.cartesianProduct left right)) S.empty
+  Mult ->  Poset $ foldMap S.union  (S.map  (uncurry absMult) (S.cartesianProduct left right)) S.empty
+  Div ->  Poset $ foldMap S.union  (S.map  (uncurry absDiv) (S.cartesianProduct left right)) S.empty
+  Mod -> Poset $ foldMap S.union  (S.map  (uncurry absMod) (S.cartesianProduct left right)) S.empty
   _ -> Poset (S.fromList [Minus, Zero, Plus]) -- BitAnd and BitOr
 
 absPlus :: Sign -> Sign -> S.Set Sign
@@ -140,8 +145,8 @@ absNot (Poset bSigns) = Poset $ S.map not bSigns
 
 absOpB :: OpBool -> Poset Bool -> Poset Bool -> Poset Bool
 absOpB op (Poset left) (Poset right) = case op of
-  And -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absAnd leftBool rightBool) (S.cartesianProduct left right)) S.empty
-  Or -> Poset $ foldMap S.union  (S.map  (\ (leftBool, rightBool) -> absOr leftBool rightBool) (S.cartesianProduct left right)) S.empty
+  And -> Poset $ foldMap S.union  (S.map  (uncurry absAnd) (S.cartesianProduct left right)) S.empty
+  Or -> Poset $ foldMap S.union  (S.map  (uncurry absOr) (S.cartesianProduct left right)) S.empty
 
 absAnd :: Bool -> Bool -> S.Set Bool
 absAnd b1 b2  = S.singleton (b1 && b2)
@@ -152,12 +157,12 @@ absOr b1 b2 = S.singleton (b1 || b2)
 
 absOpR :: OpRel  -> Poset Sign -> Poset Sign -> Poset Bool
 absOpR op (Poset left) (Poset right) = case op of
-  Lt -> Poset $ foldr S.union S.empty  (S.map  (\ (leftBool, rightBool) -> absLt leftBool rightBool) (S.cartesianProduct left right))
-  Gt -> Poset $ foldr S.union S.empty  (S.map  (\ (leftBool, rightBool) -> absGt leftBool rightBool) (S.cartesianProduct left right))
-  Le -> Poset $ foldr S.union S.empty  (S.map  (\ (leftBool, rightBool) -> absLe leftBool rightBool) (S.cartesianProduct left right))
-  Ge -> Poset $ foldr S.union S.empty  (S.map  (\ (leftBool, rightBool) -> absGe leftBool rightBool) (S.cartesianProduct left right))
-  Eq -> Poset $ foldr S.union S.empty  (S.map  (\ (leftBool, rightBool) -> absEq leftBool rightBool) (S.cartesianProduct left right))
-  Neq -> Poset $ foldr S.union S.empty (S.map  (\ (leftBool, rightBool) -> absNeq leftBool rightBool) (S.cartesianProduct left right))
+  Lt -> Poset $ foldr S.union S.empty  (S.map  (uncurry absLt) (S.cartesianProduct left right))
+  Gt -> Poset $ foldr S.union S.empty  (S.map  (uncurry absGt) (S.cartesianProduct left right))
+  Le -> Poset $ foldr S.union S.empty  (S.map  (uncurry absLe) (S.cartesianProduct left right))
+  Ge -> Poset $ foldr S.union S.empty  (S.map  (uncurry absGe) (S.cartesianProduct left right))
+  Eq -> Poset $ foldr S.union S.empty  (S.map  (uncurry absEq) (S.cartesianProduct left right))
+  Neq -> Poset $ foldr S.union S.empty (S.map  (uncurry absNeq) (S.cartesianProduct left right))
 
 
 absLt :: Sign -> Sign -> S.Set Bool
@@ -232,4 +237,4 @@ mapProduct = map (M.fromList . posetify) . mapM choose . M.assocs
     posetify = map (fmap (Poset . S.singleton))
 
 basic :: State -> [State]
-basic (State m) =  map (\x -> State x) $ mapProduct m
+basic (State m) = map State $ mapProduct m

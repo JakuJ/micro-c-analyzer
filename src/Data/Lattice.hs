@@ -28,8 +28,8 @@ instance Ord a => SemiLattice (Poset a) where
   Poset a `order` Poset b = a `S.isSubsetOf` b
   supremum (Poset a) (Poset b) = Poset $ a `S.union` b
 
-instance (Ord a, Enum a) => Lattice (Poset a) where
-  top = Poset $ S.fromList $ enumFrom (toEnum minBound)
+instance (Ord a, Bounded a, Enum a) => Lattice (Poset a) where
+  top = Poset $ S.fromList $ enumFrom minBound
   infimum (Poset a) (Poset b) = Poset $ S.intersection a b
 
 instance SemiLattice I.IntegerInterval where
