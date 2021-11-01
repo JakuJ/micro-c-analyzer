@@ -25,12 +25,12 @@ data Memory w m = Memory
 
 makeLenses ''Memory
 
-class Worklist f where
+class Worklist f a where
   empty :: f a
   insert :: a -> f a -> f a
   extract :: f a -> Maybe (a, f a)
 
-worklist :: forall m w. (Worklist w, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
+worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
 worklist pg = _output $ execState go $ Memory empty M.empty
   where
     go :: State (Memory (w StateNum) m) ()
@@ -67,7 +67,7 @@ whileM' pred' body = do
     body
     whileM' pred' body
 
-extract' :: forall m w. Worklist w => State (Memory (w StateNum) m ) StateNum
+extract' :: forall m w. Worklist w StateNum => State (Memory (w StateNum) m ) StateNum
 extract' = do
   w <- use wl
   let Just (x, w') = extract w

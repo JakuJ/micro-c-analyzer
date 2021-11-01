@@ -21,6 +21,8 @@ import           MicroC.ID                           (lval2ID)
 import           MicroC.Parser                       (parseFile)
 import           MicroC.ProgramGraph                 (PG, toPG)
 import           MicroC.Worklist                     (worklist)
+import           MicroC.Worklist.ChaoticIteration    (Chaotic)
+import           MicroC.Worklist.Queue               (Queue)
 import           MicroC.Worklist.RoundRobin          (roundRobin)
 import           MicroC.Worklist.Stack               (Stack)
 import           System.IO.Silently                  (silence)
@@ -49,11 +51,15 @@ testAnalysis graphs name = describe name $ do
         solution = roundRobin @m pg
     silence (print solution) `shouldReturn` ()
   when (direction @m == Forward) $ do
-    it "returns the same result for WL and RR on test sources" $ do
+    it "different worklist algos return the same results" $ do
       forM_ graphs $ \pg -> do
         let solRR = roundRobin @m pg
-            solWL = worklist @m @Stack pg
-        solRR `shouldBe` solWL
+            solStack = worklist @m @Stack pg
+            solQueue = worklist @m @Queue pg
+            solChaotic = worklist @m @Chaotic pg
+        solStack `shouldBe` solQueue
+        solStack `shouldBe` solChaotic
+        solStack `shouldBe` solRR
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do
