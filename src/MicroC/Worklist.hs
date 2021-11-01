@@ -13,26 +13,28 @@ import           MicroC.Analysis
 import           MicroC.ProgramGraph
 
 -- | A solution to an analysis is a mapping from states to sets of `Result`s.
-type Solution m = M.Map StateNum (Result m)
+data Solution m = Solution (M.Map StateNum (Result m)) Int
 
 -- | An algorithm works for any Program Graph and starting state and produces a `Solution`.
 type WorklistAlgorithm m = Analysis m => PG -> Solution m
 
 data Memory w m = Memory
   { _wl     :: w
-  , _output :: Solution m
+  , _output :: M.Map StateNum (Result m)
+  , _iters  :: Int
   }
 
 makeLenses ''Memory
 
 class Worklist f a where
-  empty :: f a
+  empty ::  f a
   insert :: a -> f a -> f a
   extract :: f a -> Maybe (a, f a)
 
 worklist :: forall m w. (Worklist w StateNum, Eq (Result m), Eq (w StateNum)) => WorklistAlgorithm m
-worklist forwardPG = _output $ execState go $ Memory empty M.empty
+worklist forwardPG = Solution (mem ^. output)  (mem ^. iters) 
   where
+    mem = execState go $ Memory empty M.empty 0
     pg :: PG
     pg = if direction @m == Forward then forwardPG else map (\(a, b, c) -> (c, b, a)) forwardPG
 
@@ -60,6 +62,7 @@ worklist forwardPG = _output $ execState go $ Memory empty M.empty
               satisfied = leftSide `order` aq'
 
           unless satisfied $ do
+            iters += 1
             output . at q' .= Just (aq' `supremum` leftSide)
             wl %= insert q'
 
