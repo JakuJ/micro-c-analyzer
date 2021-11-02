@@ -1,15 +1,24 @@
-{-# LANGUAGE FlexibleInstances #-}
+module MicroC.Worklist.ChaoticIteration
+( Chaotic(..)
+, module MicroC.Worklist
+) where
 
-module MicroC.Worklist.ChaoticIteration where
-
-import qualified Data.Set        as S
+import qualified Data.Set            as S
+import qualified Data.Set.Internal   as S
+import           MicroC.ProgramGraph (StateNum)
 import           MicroC.Worklist
 
-newtype Chaotic a = Chaotic (S.Set a)
+newtype Chaotic = Chaotic (S.Set StateNum)
   deriving (Eq)
 
-instance Ord a => Worklist Chaotic a where
-    empty = Chaotic S.empty
-    insert x (Chaotic s) = Chaotic $ S.insert x s
-    extract (Chaotic s) = if S.null s then Nothing else
-      let x = S.elemAt 0 s in Just (x, Chaotic $ S.delete x s)
+instance Worklist Chaotic where
+  empty = Chaotic S.empty
+  insert x (Chaotic s) = Chaotic $ S.insert x s
+  extract (Chaotic s) = (\x -> (x, Chaotic $ S.delete x s)) <$> getAny s
+
+-- | O(1) - returns an arbitrary element from the set.
+-- | It is the root of the balanced binary tree used internally by Data.Set.
+getAny :: S.Set a -> Maybe a
+getAny = \case
+  S.Bin _ a _ _ -> Just a
+  S.Tip         -> Nothing

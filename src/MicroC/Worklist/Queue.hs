@@ -1,17 +1,16 @@
-{-# LANGUAGE FlexibleInstances #-}
+module MicroC.Worklist.Queue
+( Queue(..)
+, module MicroC.Worklist
+) where
 
-module MicroC.Worklist.Queue where
-
-import           Deque.Lazy
+import qualified Deque.Lazy          as D
+import           MicroC.ProgramGraph (StateNum)
 import           MicroC.Worklist
-import           Prelude         hiding (head, null, tail)
 
-newtype Queue a = Queue (Deque a)
+newtype Queue = Queue (D.Deque StateNum)
   deriving (Eq, Semigroup, Monoid)
 
-instance Worklist Queue a where
-    empty = mempty
-    insert x (Queue q) = Queue (cons x q)
-    extract (Queue q) = case head q of
-                            Nothing -> Nothing
-                            Just a  -> Just (a, Queue (tail q))
+instance Worklist Queue where
+  empty = mempty
+  insert x (Queue q) = Queue (D.cons x q)
+  extract (Queue q) = fmap Queue <$> D.uncons q

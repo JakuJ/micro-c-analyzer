@@ -9,7 +9,9 @@ import           Common
 import           Control.Lens                        ((^.))
 import           Control.Monad
 import           Control.Monad.IO.Class              (liftIO)
+import           Data.Function                       (on)
 import           Data.IntegerInterval                (member)
+import           Data.List                           (subsequences)
 import qualified Data.Map.Lazy                       as M
 import           Data.String.Interpolate             (i)
 import           MicroC.Analysis
@@ -40,28 +42,28 @@ spec = do
   testAnalysis @FV graphs "Faint Variables"
   testAnalysis @DS graphs "Detection of Signs"
   testAnalysis @IA graphs "Interval Analysis"
-
   testIACorrectness
 
 testAnalysis :: forall m. (Show (Result m), Eq (Result m), Analysis m) => [PG] -> String -> Spec
 testAnalysis graphs name = describe name $ do
-  it "terminates on test sources" $ do
-    forM_ graphs $ \pg -> do
-      let sol = roundRobin @m pg ^. solution
+  forM_ (zip names algos) $ \(algoName, algo) -> describe algoName $ do
+    it "terminates on test sources" $ do
+      forM_ graphs $ \pg -> do
+        let sol = algo pg ^. solution
+        silence (print sol) `shouldReturn` ()
+    prop "terminates on arbitrary programs" $ \prog -> do
+      let pg = toPG prog
+          sol = algo pg ^. solution
       silence (print sol) `shouldReturn` ()
-  prop "terminates on arbitrary programs" $ \prog -> do
-    let pg = toPG prog
-        sol = roundRobin @m pg ^. solution
-    silence (print sol) `shouldReturn` ()
-  it "different worklist algos return the same results" $ do
-    forM_ graphs $ \pg -> do
-      let solRR = roundRobin @m pg ^. solution
-          solStack = worklist @m @Stack pg ^. solution
-          solQueue = worklist @m @Queue pg ^. solution
-          solChaotic = worklist @m @Chaotic pg ^. solution
-      solRR `shouldBe` solStack
-      solRR `shouldBe` solQueue
-      solRR `shouldBe` solChaotic
+  parallel $ describe "different worklist algos return the same results" $ do
+    let results = map (`map` graphs) algos
+        comp = zipWithM_ sameResult
+        combinations = filter ((==2) . length) . subsequences $ zip names results
+    forM_ combinations $ \[(n1, r1), (n2, r2)] -> it [i|#{n1} = #{n2}|] $ comp r1 r2
+  where
+    sameResult = shouldBe `on` (^. solution)
+    names = ["Round Robin", "Stack", "Queue", "Chaotic Iteration"]
+    algos = [roundRobin @m, worklist @m @Stack, worklist @m @Queue, worklist @m @Chaotic]
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do

@@ -112,8 +112,8 @@ evalAction = \case
     current <- use intervals
     let usedIDs = nub $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
         possibilities = mapProduct usedIDs current
-    states <- forM possibilities $ \m -> do
-      withState (intervals .~ m) $ do
+    states <- forM possibilities $ \possibility -> do
+      withState (intervals .~ possibility) $ do
         outcomes <- processB action
         if outcomes == Yes || outcomes == Dunno
           then Just <$> use intervals
@@ -316,7 +316,7 @@ intOf' = intOf . lval2ID
 (.==) :: LValue 'CInt -> Interval -> Eval ()
 lv .== r = case lv of
   ArrayIndex _ _ -> intOf' lv %= fmap (supremum r)
-  _              -> intOf' lv .= Just r
+  _              -> intOf' lv ?= r
 
 bounds :: Interval -> (Int', Int')
 bounds x = (lowerBound x, upperBound x)

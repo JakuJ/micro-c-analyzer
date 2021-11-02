@@ -12,12 +12,7 @@ import           MicroC.Analysis.DetectionOfSigns (DS)
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
-import           MicroC.Worklist
 import           MicroC.Worklist.ChaoticIteration
-import           MicroC.Worklist.Stack
-import           MicroC.Worklist.Queue
-
-
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -33,17 +28,17 @@ analyseFile path = do
     Left errs -> mapM_ putStrLn errs
     Right ast -> do
       let pg = toPG ast
-          Solution solution iters = worklist @m @Queue pg
+          Solution sol its = worklist @m @Chaotic pg
       putStrLn "AST:"
       print ast
       putStrLn "PG:"
       mapM_ (putStrLn . printEdge) pg
       putStrLn "SOLUTION: "
-      case M.toList solution of
+      case M.toList sol of
         []      -> print "Program is empty"
         (h : t) -> forM_ (t ++ [h]) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show lv
       putStr "Number of iterations: "
-      print iters
+      print its
       putStrLn "Interpreter:"
       void $ runIO (evalProgram ast)
   where

@@ -67,11 +67,11 @@ evalDecls = mapM_ evalDecl
 
 -- Declarations
 evalDecl :: Monad m => Declaration -> Env m ()
-evalDecl (VariableDecl name) = memory . at (Variable name) .= Just 0
-evalDecl (ArrayDecl size name) = forM_ [0 .. size - 1] $ \i -> memory . at (ArrayIndex name (Literal i)) .= Just 0
+evalDecl (VariableDecl name) = memory . at (Variable name) ?= 0
+evalDecl (ArrayDecl size name) = forM_ [0 .. size - 1] $ \i -> memory . at (ArrayIndex name (Literal i)) ?= 0
 evalDecl (RecordDecl name fs) = do
-  fields . at name .= Just fs
-  forM_ fs $ \f -> memory . at (FieldAccess name f) .= Just 0
+  fields . at name ?= fs
+  forM_ fs $ \f -> memory . at (FieldAccess name f) ?= 0
 
 -- Statements
 evalStat :: MonadEval m => Statement -> Env m ()
@@ -91,7 +91,7 @@ evalStat loop@(While cond body) = do
   when true $ do
     evalStats body
     evalStat loop
-evalStat (Read lval) = (memory . at lval .=) . Just =<< lift evalRead
+evalStat (Read lval) = (memory . at lval ?=) =<< lift evalRead
 evalStat (Write rval) = lift . evalWrite =<< evalR rval
 
 -- R-values

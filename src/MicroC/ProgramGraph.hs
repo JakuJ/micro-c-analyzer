@@ -111,9 +111,7 @@ stmToPG qs qe (RecordAssignment r vals) = do
   fs <- getFields r
   states' <- replicateM (length (zip fs vals) - 1) newState
   let states = qs : states' ++ [qe]
-      triples = zip3 fs vals (zip states (tail states))
-      mkEdge (f, v, (q1, q2)) = (q1, AssignAction (FieldAccess r f) v, q2)
-  pure $ map mkEdge triples
+  pure [(q1, AssignAction (FieldAccess r f) v, q2) | f <- fs | v <- vals | (q1, q2) <- zip states (tail states)]
 
 stmToPG qs qe (IfThen (test -> (yes, no)) body) = do
   rest <- branchThrough qs qe yes body

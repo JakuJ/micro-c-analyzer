@@ -63,6 +63,7 @@ library
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
+      ParallelListComp
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -101,6 +102,7 @@ executable micro-c-analyzer-exe
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
+      ParallelListComp
       RankNTypes
       StandaloneDeriving
       TupleSections
@@ -149,6 +151,7 @@ test-suite micro-c-analyzer-test
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
+      ParallelListComp
       RankNTypes
       StandaloneDeriving
       TupleSections

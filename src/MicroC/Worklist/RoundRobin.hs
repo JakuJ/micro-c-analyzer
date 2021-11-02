@@ -3,31 +3,36 @@
 
 module MicroC.Worklist.RoundRobin
 ( roundRobin
+, module MicroC.Worklist
 ) where
 
+import           Control.Lens
 import           Control.Monad.State.Lazy
 import           Data.Lattice
 import qualified Data.Map.Lazy            as M
-import           Data.Set                 (singleton, (\\))
-import           MicroC.Analysis          (Analysis (..), Direction (..))
-import           MicroC.ProgramGraph      (allStates)
+import qualified Data.Set                 as S
+import           MicroC.Analysis
+import           MicroC.ProgramGraph
 import           MicroC.Worklist
 
 -- | An implementation of the Round Robin worklist algorithm.
 roundRobin :: forall m. WorklistAlgorithm m
 roundRobin pg = Solution mem 0 -- TODO iteration counting
   where
-    mem =  execState go M.empty 
+    mem :: M.Map StateNum (Result m)
+    mem = execState go M.empty
+
+    go :: State (M.Map StateNum (Result m)) ()
     go = do
       -- all states except the first one
       let s0 = if direction @m == Forward then 0 else -1
-          qq = allStates pg \\ singleton s0
+          qq = allStates pg S.\\ S.singleton s0
 
       -- set bottom value to all states
-      forM_ qq $ \s -> modify (M.insert s bottom)
+      forM_ qq $ \q -> at q ?= bottom
 
       -- set initial value to state s0
-      modify (M.insert s0 (initialValue @m pg))
+      at s0 ?= initialValue @m pg
 
       -- iterate until False is returned for every element
       whileM $ anyM pg $ \e -> do
@@ -41,7 +46,7 @@ roundRobin pg = Solution mem 0 -- TODO iteration counting
             satisfied = leftSide `order` aq'
         if not satisfied then do
           -- if not satisfied, we set update the solution for state q'
-          modify $ M.insert q' (supremum aq' leftSide)
+          at q' ?= supremum aq' leftSide
           -- and indicate something has changed
           pure True
         else
