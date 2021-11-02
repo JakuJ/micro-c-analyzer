@@ -12,5 +12,5 @@ newtype Queue = Queue (D.Deque StateNum)
 
 instance Worklist Queue where
   empty = mempty
-  insert x (Queue q) = Queue (D.cons x q)
+  insert x (Queue q) = Queue (D.snoc x q)
   extract (Queue q) = fmap Queue <$> D.uncons q
