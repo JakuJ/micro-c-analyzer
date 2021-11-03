@@ -12,5 +12,5 @@ newtype Stack = Stack [StateNum]
 instance Worklist Stack where
   empty = Stack []
   insert x (Stack s) = Stack (x : s)
-  extract (Stack [])       = Nothing
-  extract (Stack (x : xs)) = Just (x, Stack xs)
+  extract _ (Stack [])       = Nothing
+  extract _ (Stack (x : xs)) = Just (x, Stack xs)

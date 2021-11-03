@@ -11,6 +11,7 @@ import           Data.Lattice
 import qualified Data.Map            as M
 import           Data.Maybe          (fromJust)
 import           MicroC.Analysis
+import           MicroC.DFS          (SpanningTree, dfs)
 import           MicroC.ProgramGraph
 
 -- | An analysis assignment maps a `StateNum` to the analysis' `Result`.
@@ -39,7 +40,7 @@ makeLenses ''Memory
 class Worklist w where
   empty :: w
   insert :: StateNum -> w -> w
-  extract :: w -> Maybe (StateNum, w)
+  extract :: SpanningTree -> w -> Maybe (StateNum, w)
 
 -- | An implementation of the worklist algorithm polymorphic over the worklist representation.
 worklist :: forall w m. Worklist w => WorklistAlgorithm m
@@ -52,6 +53,9 @@ worklist forwardPG = Solution (mem ^. output) (mem ^. iters)
     pg = case direction @m of
       Forward  -> forwardPG
       Backward -> map (\(a, b, c) -> (c, b, a)) forwardPG
+
+    st :: SpanningTree
+    st = dfs initialState pg
 
     initialState :: StateNum
     initialState = case direction @m of
@@ -69,7 +73,7 @@ worklist forwardPG = Solution (mem ^. output) (mem ^. iters)
       output . at initialState ?= initialValue @m pg
 
       -- While worklist is not empty, extract q
-      whileWL $ \q -> do
+      whileWL st $ \q -> do
         -- For all edges starting with state q
         let edges = filter (\(x, _, _) -> x == q) pg
         forM_ edges $ \e@(_, _, q') -> do
@@ -87,17 +91,16 @@ worklist forwardPG = Solution (mem ^. output) (mem ^. iters)
             output . at q' ?= aq' `supremum` leftSide
             wl %= insert q'
 
+whileWL :: (Analysis m, Worklist w) => SpanningTree -> (StateNum -> State (Memory w m) ()) -> State (Memory w m) ()
+whileWL st process = do
+  v <- extract' st
+  case v of
+    Nothing -> pure ()
+    Just v' -> process v' >> whileWL st process
 
-whileWL :: (Analysis m, Worklist w) => (StateNum -> State (Memory w m) ()) -> State (Memory w m) ()
-whileWL process = do
-  st <- extract'
-  case st of
-    Nothing  -> pure ()
-    Just st' -> process st' >> whileWL process
-
-extract' :: Worklist w => State (Memory w m) (Maybe StateNum)
-extract' = do
+extract' :: Worklist w => SpanningTree -> State (Memory w m) (Maybe StateNum)
+extract' st = do
   w <- use wl
-  case extract w of
+  case extract st w of
     Nothing      -> pure Nothing
     Just (x, w') -> wl .= w' >> pure (Just x)

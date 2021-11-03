@@ -26,6 +26,7 @@ import           MicroC.Parser                       (parseFile)
 import           MicroC.ProgramGraph                 (PG, toPG)
 import           MicroC.Worklist                     (solution, worklist)
 import           MicroC.Worklist.ChaoticIteration    (Chaotic)
+import           MicroC.Worklist.PostOrder           (PostOrder)
 import           MicroC.Worklist.Queue               (Queue)
 import           MicroC.Worklist.RoundRobin          (roundRobin)
 import           MicroC.Worklist.Stack               (Stack)
@@ -62,8 +63,8 @@ testAnalysis graphs name = describe name $ do
     forM_ combinations $ \[(n1, r1), (n2, r2)] -> it [i|#{n1} = #{n2}|] $ comp r1 r2
   where
     sameResult = shouldBe `on` (^. solution)
-    names = ["Round Robin", "Stack", "Queue", "Chaotic Iteration"]
-    algos = [roundRobin @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m]
+    names = ["Round Robin", "Stack", "Queue", "Chaotic Iteration", "Post-Order Worklist"]
+    algos = [roundRobin @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PostOrder @m]
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do

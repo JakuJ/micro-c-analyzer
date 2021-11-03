@@ -14,7 +14,7 @@ newtype Chaotic = Chaotic (S.Set StateNum)
 instance Worklist Chaotic where
   empty = Chaotic S.empty
   insert x (Chaotic s) = Chaotic $ S.insert x s
-  extract (Chaotic s) = (\x -> (x, Chaotic $ S.delete x s)) <$> getAny s
+  extract _ (Chaotic s) = (\x -> (x, Chaotic $ S.delete x s)) <$> getAny s
 
 -- | O(1) - returns an arbitrary element from the set.
 -- | It is the root of the balanced binary tree used internally by Data.Set.

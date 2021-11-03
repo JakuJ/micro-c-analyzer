@@ -15,6 +15,7 @@ import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
 import           MicroC.Worklist.ChaoticIteration
+import           MicroC.Worklist.PostOrder
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -30,8 +31,8 @@ analyseFile path = do
     Left errs -> mapM_ putStrLn errs
     Right ast -> do
       let pg = toPG ast
-          Solution sol its = worklist @Chaotic @m pg
-          tree = dfs pg
+          Solution sol its = worklist @PostOrder @m pg
+          tree = dfs 0 pg -- 0 because it's a forward analysis
       putStrLn "AST:"
       print ast
       putStrLn "PG:"

@@ -7,6 +7,7 @@ module MicroC.DFS
 -- * Lenses
 , edges
 , numbering
+, state0
 ) where
 
 import           Control.Lens
@@ -19,6 +20,7 @@ import           MicroC.ProgramGraph
 data SpanningTree = SpanningTree
   { _edges     :: S.Set (StateNum, StateNum)
   , _numbering :: M.Map StateNum Int
+  , _state0    :: StateNum
   }
   deriving (Show)
 
@@ -32,26 +34,26 @@ data Memory = Memory
 
 makeLenses ''Memory
 
-dfs :: PG -> SpanningTree
-dfs pg = view tree $ flip execState initMemory $ go 0 -- assuming 0 is the first state
+dfs :: StateNum -> PG -> SpanningTree
+dfs s0 pg = view tree $ flip execState initMemory $ go s0 -- assuming 0 is the first state
   where
     states :: S.Set StateNum
     states = allStates pg
 
     initMemory :: Memory
-    initMemory = Memory (SpanningTree S.empty M.empty) S.empty (S.size states)
+    initMemory = Memory (SpanningTree S.empty M.empty s0) S.empty (S.size states)
 
     go :: Int -> State Memory ()
-    go s0 = do
+    go q = do
       -- mark node as seen
-      seen <- visited <%= S.insert s0
+      seen <- visited <%= S.insert q
       -- forall unseen edges from this node
-      let unseen = filter (\(q1, _, q2) -> q1 == s0 && S.notMember q2 seen) pg
-      forM_ unseen $ \(q1, _, q2) -> do
-        tree . edges %= S.insert (q1, q2)
-        go q2
+      let unseen = filter (\(q1, _, q2) -> q1 == q && S.notMember q2 seen) pg
+      forM_ unseen $ \(_, _, q') -> do
+        tree . edges %= S.insert (q, q')
+        go q'
       k' <- k <<-= 1
-      tree . numbering . at s0 ?= k'
+      tree . numbering . at q ?= k'
 
 orderStates :: SpanningTree -> [StateNum]
-orderStates (SpanningTree _ nb) = map fst . sortOn snd . M.assocs $ nb
+orderStates (SpanningTree _ nb _) = map fst . sortOn snd . M.assocs $ nb

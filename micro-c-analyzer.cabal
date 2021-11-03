@@ -46,6 +46,7 @@ library
       MicroC.ProgramGraph
       MicroC.Worklist
       MicroC.Worklist.ChaoticIteration
+      MicroC.Worklist.PostOrder
       MicroC.Worklist.Queue
       MicroC.Worklist.RoundRobin
       MicroC.Worklist.Stack
