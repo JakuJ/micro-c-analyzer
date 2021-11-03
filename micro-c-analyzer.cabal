@@ -39,12 +39,14 @@ library
       MicroC.Analysis.LiveVariables
       MicroC.Analysis.ReachingDefinitions
       MicroC.AST
+      MicroC.DFS
       MicroC.ID
       MicroC.Interpreter
       MicroC.Parser
       MicroC.ProgramGraph
       MicroC.Worklist
       MicroC.Worklist.ChaoticIteration
+      MicroC.Worklist.PostOrder
       MicroC.Worklist.Queue
       MicroC.Worklist.RoundRobin
       MicroC.Worklist.Stack
