@@ -74,14 +74,18 @@ library
       QuasiQuotes
   ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -O2 -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
-      array
+      QuickCheck
+    , array
     , base >=4.7 && <5
     , containers
     , data-interval
     , deque
     , extended-reals
+    , generic-random
+    , hspec
     , lens
     , mtl
+    , silently
     , string-interpolate
   default-language: Haskell2010
 
@@ -113,15 +117,19 @@ executable micro-c-analyzer-exe
       QuasiQuotes
   ghc-options: -eventlog -fprof-auto -fno-prof-count-entries -O2 -flate-dmd-anal -flate-specialise -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      array
+      QuickCheck
+    , array
     , base >=4.7 && <5
     , containers
     , data-interval
     , deque
     , extended-reals
+    , generic-random
+    , hspec
     , lens
     , micro-c-analyzer
     , mtl
+    , silently
     , string-interpolate
   default-language: Haskell2010
 

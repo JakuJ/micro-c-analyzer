@@ -9,6 +9,7 @@ import           Control.Lens
 import           Control.Monad.State
 import           Data.Lattice
 import qualified Data.Map            as M
+import           Data.Maybe          (fromJust)
 import           MicroC.Analysis
 import           MicroC.ProgramGraph
 
@@ -41,17 +42,21 @@ class Worklist w where
   extract :: w -> Maybe (StateNum, w)
 
 -- | An implementation of the worklist algorithm polymorphic over the worklist representation.
-worklist :: forall m w. (Worklist w, Eq (Result m)) => WorklistAlgorithm m
-worklist forwardPG = Solution (mem ^. output)  (mem ^. iters)
+worklist :: forall w m. Worklist w => WorklistAlgorithm m
+worklist forwardPG = Solution (mem ^. output) (mem ^. iters)
   where
     mem :: Memory w m
     mem = execState go $ Memory empty M.empty 0
 
     pg :: PG
-    pg = if direction @m == Forward then forwardPG else map (\(a, b, c) -> (c, b, a)) forwardPG
+    pg = case direction @m of
+      Forward  -> forwardPG
+      Backward -> map (\(a, b, c) -> (c, b, a)) forwardPG
 
     initialState :: StateNum
-    initialState = if direction @m == Forward then 0 else -1
+    initialState = case direction @m of
+      Forward  -> 0
+      Backward -> -1
 
     go :: State (Memory w m) ()
     go = do
@@ -63,12 +68,15 @@ worklist forwardPG = Solution (mem ^. output)  (mem ^. iters)
       -- Initial constraint
       output . at initialState ?= initialValue @m pg
 
-      whileWL $ \q0 -> do
-        let edges = filter (\(q, _, _) -> q == q0) pg
-        forM_ edges $ \e@(q, _, q') -> do
+      -- While worklist is not empty, extract q
+      whileWL $ \q -> do
+        -- For all edges starting with state q
+        let edges = filter (\(x, _, _) -> x == q) pg
+        forM_ edges $ \e@(_, _, q') -> do
+
           -- get current solution for q and q'
-          aq <- use $ output . at q . non bottom
-          aq' <- use $ output . at q' . non bottom
+          aq <- fmap fromJust . use $ output . at q
+          aq' <- fmap fromJust . use $ output . at q'
 
           -- calculate left side of the constraint
           let leftSide = analyze @m pg e aq
@@ -78,6 +86,7 @@ worklist forwardPG = Solution (mem ^. output)  (mem ^. iters)
             iters += 1
             output . at q' ?= aq' `supremum` leftSide
             wl %= insert q'
+
 
 whileWL :: (Analysis m, Worklist w) => (StateNum -> State (Memory w m) ()) -> State (Memory w m) ()
 whileWL process = do

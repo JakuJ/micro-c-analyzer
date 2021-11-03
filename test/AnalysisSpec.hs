@@ -63,7 +63,7 @@ testAnalysis graphs name = describe name $ do
   where
     sameResult = shouldBe `on` (^. solution)
     names = ["Round Robin", "Stack", "Queue", "Chaotic Iteration"]
-    algos = [roundRobin @m, worklist @m @Stack, worklist @m @Queue, worklist @m @Chaotic]
+    algos = [roundRobin @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m]
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do

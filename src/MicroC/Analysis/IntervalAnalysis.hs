@@ -80,8 +80,8 @@ evalExpr (Reference lv) = case lv of
       then use (intOf' lv . non bottom)
       -- array index out of possible bounds
       else pure bottom
-  -- unknown variables are initialized with garbage
-  _ -> use (intOf' lv . non top)
+  -- unknown variables are bottom
+  _ -> use (intOf' lv . non bottom)
 evalExpr (OpA left op right) = evalOp op <$> evalExpr left <*> evalExpr right
 
 evalOp :: OpArith -> Interval -> Interval -> Interval

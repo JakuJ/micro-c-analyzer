@@ -8,7 +8,7 @@ import           Control.Monad                    (forM_, void)
 import           Control.Monad.IO.Class           (MonadIO (..))
 import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
-import           MicroC.Analysis.DetectionOfSigns (DS)
+import           MicroC.Analysis.IntervalAnalysis (IA)
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
@@ -21,14 +21,14 @@ instance MonadEval IOEval where
   evalRead = liftIO readLn
   evalWrite = IOEval . print
 
-analyseFile :: forall m. (Analysis m, Show (Result m), Eq (Result m)) => FilePath -> IO ()
+analyseFile :: forall m. (Analysis m, Show (Result m)) => FilePath -> IO ()
 analyseFile path = do
   prog <- parseFile $ "sources/" <> path <> ".c"
   case prog of
     Left errs -> mapM_ putStrLn errs
     Right ast -> do
       let pg = toPG ast
-          Solution sol its = worklist @m @Chaotic pg
+          Solution sol its = worklist @Chaotic @m pg
       putStrLn "AST:"
       print ast
       putStrLn "PG:"
@@ -46,4 +46,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @DS "pos_avg"
+main = analyseFile @IA "even"
