@@ -4,11 +4,13 @@
 
 module Main (main) where
 
+import           Control.Lens                     ((^.))
 import           Control.Monad                    (forM_, void)
 import           Control.Monad.IO.Class           (MonadIO (..))
 import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
 import           MicroC.Analysis.IntervalAnalysis (IA)
+import           MicroC.DFS
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
@@ -29,10 +31,15 @@ analyseFile path = do
     Right ast -> do
       let pg = toPG ast
           Solution sol its = worklist @Chaotic @m pg
+          tree = dfs pg
       putStrLn "AST:"
       print ast
       putStrLn "PG:"
       mapM_ (putStrLn . printEdge) pg
+      putStrLn "Reverse postorder:"
+      print $ orderStates tree
+      putStrLn "Depth First Spanning Tree:"
+      print $ tree ^. edges
       putStrLn "SOLUTION: "
       case M.toList sol of
         []      -> print "Program is empty"
@@ -46,4 +53,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @IA "even"
+main = analyseFile @IA "dfs"

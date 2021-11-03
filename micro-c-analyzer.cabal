@@ -39,6 +39,7 @@ library
       MicroC.Analysis.LiveVariables
       MicroC.Analysis.ReachingDefinitions
       MicroC.AST
+      MicroC.DFS
       MicroC.ID
       MicroC.Interpreter
       MicroC.Parser
