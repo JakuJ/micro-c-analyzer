@@ -74,6 +74,8 @@ tStat (A.While c b)            = C.While (tBool c) (map tStat b)
 tStat (A.ReadL l)              = C.Read (tLval l)
 tStat (A.ReadI x)              = C.Read (C.Variable (tIdent x))
 tStat (A.Write a)              = C.Write (tArith a)
+tStat A.Continue               = C.Continue
+tStat A.Break                  = C.Break
 
 tField :: A.Field -> C.Identifier
 tField (A.Field n) = tIdent n

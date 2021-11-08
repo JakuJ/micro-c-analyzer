@@ -31,6 +31,8 @@ While . Statement ::= "while" "(" Boolean ")" "{" [Statement] "}" ;
 ReadL . Statement ::= "read" LValue ";" ;
 ReadI . Statement ::= "read" Ident ";" ;
 Write . Statement ::= "write" Arith ";" ;
+Continue . Statement ::= "continue" ";" ;
+Break . Statement ::= "break" ";" ;
 
 Array . LValue ::= Ident "[" Arith "]" ;
 RecordField . LValue ::= Ident "." Ident ;

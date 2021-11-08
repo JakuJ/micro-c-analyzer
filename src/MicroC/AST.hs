@@ -129,6 +129,8 @@ data Statement
   | Read (LValue 'CInt)
   -- | A __write__ statement.
   | Write (RValue 'CInt)
+  | Continue
+  | Break
     deriving (Show, Eq, Ord, Data)
 
 deriving instance Plated Statement
