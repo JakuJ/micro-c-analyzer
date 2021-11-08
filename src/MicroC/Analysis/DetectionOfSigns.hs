@@ -62,8 +62,8 @@ instance Analysis DS where
     AssignAction (AST.ArrayIndex a _) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
     ReadAction lval -> State $ M.insert (lval2ID lval) top result
-    BoolAction rval -> foldr supremum bottom
-                      $ filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result)
+    BoolAction rval -> (State $ M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` (foldr supremum bottom
+                      $ filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))
       where
         usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
     _ -> State result
