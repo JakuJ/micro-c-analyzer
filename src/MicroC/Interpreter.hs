@@ -75,12 +75,11 @@ evalDecl (RecordDecl name fs) = do
 
 -- Statements
 evalStat :: MonadEval m => Statement -> Env m ()
---  (memory . at lval) <~ Just <$> evalR rval
 evalStat (Assignment lval rval) = case lval of
   ArrayIndex arr i -> do
       i' <- evalR i
-      (memory . at (ArrayIndex arr (Literal i'))) <~ Just <$> evalR rval
-  _-> (memory . at lval) <~ Just <$> evalR rval
+      memory . at (ArrayIndex arr (Literal i')) <~ Just <$> evalR rval
+  _ -> memory . at lval <~ Just <$> evalR rval
 evalStat (RecordAssignment i rs) = do
   fs <- use (fields . ix i)
   forM_ (zip fs rs) $ \(f, r) ->
@@ -99,8 +98,8 @@ evalStat loop@(While cond body) = do
 evalStat (Read lval) = case lval of
   ArrayIndex arr i -> do
     i' <- evalR i
-    (memory . at (ArrayIndex arr (Literal i')) ?=) =<< lift evalRead
-  _ -> (memory . at lval ?=) =<< lift evalRead
+    memory . at (ArrayIndex arr (Literal i')) <~ Just <$> lift evalRead
+  _ -> memory . at lval <~ Just <$> lift evalRead
 evalStat (Write rval) = lift . evalWrite =<< evalR rval
 
 -- R-values

@@ -39,6 +39,7 @@ library
       MicroC.Analysis.LiveVariables
       MicroC.Analysis.ReachingDefinitions
       MicroC.AST
+      MicroC.Benchmark
       MicroC.DFS
       MicroC.ID
       MicroC.Interpreter
@@ -46,6 +47,7 @@ library
       MicroC.ProgramGraph
       MicroC.Worklist
       MicroC.Worklist.ChaoticIteration
+      MicroC.Worklist.PendingSet
       MicroC.Worklist.PostOrder
       MicroC.Worklist.Queue
       MicroC.Worklist.RoundRobin

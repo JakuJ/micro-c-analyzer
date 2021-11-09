@@ -1,14 +1,8 @@
-int i; /* iterator variable */
-int fact; /* output variable */
-int num; /* input variable */
+// factorial program as in PA4FUN
 
-i := 1;
-fact := 1;
-read num;
+y := 1;
 
-while (i <= num) {
-    fact := fact * i;
-    i := i + 1;
+while (x > 0) {
+    y := x * y;
+    x := x - 1;
 }
-
-write fact;

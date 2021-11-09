@@ -26,6 +26,7 @@ import           MicroC.Parser                       (parseFile)
 import           MicroC.ProgramGraph                 (PG, toPG)
 import           MicroC.Worklist                     (solution, worklist)
 import           MicroC.Worklist.ChaoticIteration    (Chaotic)
+import           MicroC.Worklist.PendingSet          (PendingSet)
 import           MicroC.Worklist.PostOrder           (PostOrder)
 import           MicroC.Worklist.Queue               (Queue)
 import           MicroC.Worklist.RoundRobin          (roundRobin)
@@ -59,12 +60,12 @@ testAnalysis graphs name = describe name $ do
   parallel $ describe "different worklist algos return the same results" $ do
     let results = map (`map` graphs) algos
         comp = zipWithM_ sameResult
-        combinations = filter ((==2) . length) . subsequences $ zip names results
-    forM_ combinations $ \[(n1, r1), (n2, r2)] -> it [i|#{n1} = #{n2}|] $ comp r1 r2
+        combinations = let xs = zip names results in zip xs (tail xs)
+    forM_ combinations $ \((n1, r1), (n2, r2)) -> it [i|#{n1} = #{n2}|] $ comp r1 r2
   where
     sameResult = shouldBe `on` (^. solution)
-    names = ["Round Robin", "Stack", "Queue", "Chaotic Iteration", "Post-Order Worklist"]
-    algos = [roundRobin @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PostOrder @m]
+    names = ["Naive Round Robin", "Stack", "Queue", "Chaotic Iteration", "Simple Post-Order", "Post-Order with Pending Set"]
+    algos = [roundRobin @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PostOrder @m, worklist @PendingSet @m]
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do

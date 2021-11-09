@@ -17,12 +17,12 @@ import           MicroC.Worklist
 
 -- | An implementation of the Round Robin worklist algorithm.
 roundRobin :: forall m. WorklistAlgorithm m
-roundRobin pg = Solution mem 0 -- TODO iteration counting
+roundRobin pg = Solution mem (-1) -- We do not care about iteration counting
   where
-    mem :: M.Map StateNum (Result m)
+    mem :: Assignment m
     mem = execState go M.empty
 
-    go :: State (M.Map StateNum (Result m)) ()
+    go :: State (Assignment m) ()
     go = do
       -- all states except the first one
       let s0 = if direction @m == Forward then 0 else -1

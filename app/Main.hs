@@ -9,13 +9,13 @@ import           Control.Monad                    (forM_, void)
 import           Control.Monad.IO.Class           (MonadIO (..))
 import qualified Data.Map                         as M
 import           MicroC.Analysis                  (Analysis (Result))
-import           MicroC.Analysis.IntervalAnalysis (IA)
+import           MicroC.Analysis.DetectionOfSigns (DS)
+import           MicroC.Benchmark                 (benchmark)
 import           MicroC.DFS
 import           MicroC.Interpreter               (MonadEval (..), evalProgram)
 import           MicroC.Parser                    (parseFile)
 import           MicroC.ProgramGraph              (Edge, toPG)
-import           MicroC.Worklist.ChaoticIteration
-import           MicroC.Worklist.PostOrder
+import           MicroC.Worklist.PendingSet
 
 newtype IOEval a = IOEval {runIO :: IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -31,7 +31,7 @@ analyseFile path = do
     Left errs -> mapM_ putStrLn errs
     Right ast -> do
       let pg = toPG ast
-          Solution sol its = worklist @PostOrder @m pg
+          Solution sol its = worklist @PendingSet @m pg
           tree = dfs 0 pg -- 0 because it's a forward analysis
       putStrLn "AST:"
       print ast
@@ -54,4 +54,4 @@ analyseFile path = do
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
 
 main :: IO ()
-main = analyseFile @IA "dfs"
+main = benchmark >> analyseFile @DS "insertion_sort"

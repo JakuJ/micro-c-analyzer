@@ -35,7 +35,7 @@ data Memory = Memory
 makeLenses ''Memory
 
 dfs :: StateNum -> PG -> SpanningTree
-dfs s0 pg = view tree $ flip execState initMemory $ go s0 -- assuming 0 is the first state
+dfs s0 pg = view tree $ execState (go s0) initMemory
   where
     states :: S.Set StateNum
     states = allStates pg

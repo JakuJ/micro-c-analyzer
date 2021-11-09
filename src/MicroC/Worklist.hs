@@ -30,7 +30,7 @@ makeLenses ''Solution
 
 data Memory w m = Memory
   { _wl     :: w
-  , _output :: M.Map StateNum (Result m)
+  , _output :: Assignment m
   , _iters  :: Int
   }
 
@@ -76,7 +76,13 @@ worklist forwardPG = Solution (mem ^. output) (mem ^. iters)
       whileWL st $ \q -> do
         -- For all edges starting with state q
         let edges = filter (\(x, _, _) -> x == q) pg
+
+        -- skipping a state counts as an iteration
+        when (null edges) $ iters += 1
+
         forM_ edges $ \e@(_, _, q') -> do
+          -- processing an edge is one iteration
+          iters += 1
 
           -- get current solution for q and q'
           aq <- fmap fromJust . use $ output . at q
@@ -87,7 +93,6 @@ worklist forwardPG = Solution (mem ^. output) (mem ^. iters)
               satisfied = leftSide `order` aq'
 
           unless satisfied $ do
-            iters += 1
             output . at q' ?= aq' `supremum` leftSide
             wl %= insert q'
 
