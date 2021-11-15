@@ -11,7 +11,6 @@ import           Control.Monad
 import           Control.Monad.IO.Class              (liftIO)
 import           Data.Function                       (on)
 import           Data.IntegerInterval                (member)
-import           Data.List                           (subsequences)
 import qualified Data.Map.Lazy                       as M
 import           Data.String.Interpolate             (i)
 import           MicroC.Analysis

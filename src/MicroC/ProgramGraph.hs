@@ -30,6 +30,8 @@ data Action
   | ReadAction (LValue 'CInt)
   | WriteAction (RValue 'CInt)
   | BoolAction (RValue 'CBool)
+  | BreakAction
+  | ContinueAction
     deriving (Eq, Show, Data)
 
 makePrisms ''Action
@@ -43,6 +45,7 @@ type PG = [Edge]
 data Memory = Memory
   { _nextInt :: Int
   , _fields  :: Map Identifier [Identifier]
+  , _loops   :: [(StateNum, StateNum)]
   }
 
 makeLenses ''Memory
@@ -67,7 +70,7 @@ getFields :: Identifier -> NodeM [Identifier]
 getFields r = use $ fields . ix r
 
 toPG :: Program -> PG
-toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds)
+toPG p@(Program ds _) = evalState (toPG' 0 (-1) p) $ Memory 1 (declaredRecords ds) []
 
 toPG' :: StateNum -> StateNum -> Program -> NodeM PG
 toPG' qs qe (Program [] ss)  = stmsToPG qs qe ss
@@ -103,6 +106,16 @@ test :: RValue 'CBool -> (Action, Action)
 test v = (v, Not v) & each %~ BoolAction
 
 stmToPG :: StateNum -> StateNum -> Statement -> NodeM PG
+stmToPG qs _ Break = do
+  loopz <- use loops
+  case loopz of
+    []         -> error "Program Graph generation: Illegal break statement!"
+    (_, qe'):_ -> do return [(qs, BreakAction, qe')]
+stmToPG qs _ Continue =  do
+  loopz <- use loops
+  case loopz of
+    []         ->  error "Program Graph generation: Illegal continue statement!"
+    (qs', _):_ -> do return [(qs, ContinueAction, qs')]
 stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
 stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
@@ -120,8 +133,12 @@ stmToPG qs qe (IfThen (test -> (yes, no)) body) = do
 stmToPG qs qe (IfThenElse (test -> (yes, no)) body els) =
   (++) <$> branchThrough qs qe yes body <*> branchThrough qs qe no els
 
-stmToPG qs qe (While (test -> (yes, no)) body) =
-  ((qs, no, qe) :) <$> branchThrough qs qs yes body
+stmToPG qs qe (While (test -> (yes, no)) body) = do
+  loops %= ((qs, qe) :)
+  res <- ((qs, no, qe) :) <$> branchThrough qs qs yes body
+  loopz <- use loops
+  loops .= tail loopz
+  return res
 
 branchThrough :: StateNum -> StateNum -> Action -> Statements -> NodeM PG
 branchThrough qs qe branch body = do

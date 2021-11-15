@@ -101,6 +101,8 @@ evalStat (Read lval) = case lval of
     memory . at (ArrayIndex arr (Literal i')) <~ Just <$> lift evalRead
   _ -> memory . at lval <~ Just <$> lift evalRead
 evalStat (Write rval) = lift . evalWrite =<< evalR rval
+evalStat Break = error "Interpreter does not support break statements!"
+evalStat Continue = error "Interpreter does not support continue statements!"
 
 -- R-values
 evalR :: Monad m => RValue t -> Env m (TypeRepr t)
