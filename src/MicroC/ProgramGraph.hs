@@ -30,8 +30,7 @@ data Action
   | ReadAction (LValue 'CInt)
   | WriteAction (RValue 'CInt)
   | BoolAction (RValue 'CBool)
-  | BreakAction
-  | ContinueAction
+  | JumpAction
     deriving (Eq, Show, Data)
 
 makePrisms ''Action
@@ -110,12 +109,12 @@ stmToPG qs _ Break = do
   loopz <- use loops
   case loopz of
     []         -> error "Program Graph generation: Illegal break statement!"
-    (_, qe'):_ -> do return [(qs, BreakAction, qe')]
+    (_, qe'):_ -> do return [(qs, JumpAction, qe')]
 stmToPG qs _ Continue =  do
   loopz <- use loops
   case loopz of
     []         ->  error "Program Graph generation: Illegal continue statement!"
-    (qs', _):_ -> do return [(qs, ContinueAction, qs')]
+    (qs', _):_ -> do return [(qs, JumpAction, qs')]
 stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
 stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
