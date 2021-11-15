@@ -3,7 +3,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
-module MicroC.Worklist where
+module MicroC.Worklist
+( Assignment
+, WorklistAlgorithm
+, Solution(..)
+, Worklist(..)
+, worklist
+-- ** Lenses
+, solution
+, iterations
+) where
 
 import           Control.Lens
 import           Control.Monad.State

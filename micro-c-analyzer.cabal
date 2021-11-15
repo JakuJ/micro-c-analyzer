@@ -47,10 +47,10 @@ library
       MicroC.ProgramGraph
       MicroC.Worklist
       MicroC.Worklist.ChaoticIteration
+      MicroC.Worklist.Naive
       MicroC.Worklist.PendingSet
       MicroC.Worklist.PostOrder
       MicroC.Worklist.Queue
-      MicroC.Worklist.RoundRobin
       MicroC.Worklist.Stack
   other-modules:
       Paths_micro_c_analyzer

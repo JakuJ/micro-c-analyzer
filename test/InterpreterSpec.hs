@@ -6,7 +6,6 @@ import           Control.Monad.IO.Class (liftIO)
 import           MicroC.Parser          (parseFile)
 import           Test.Hspec
 
-
 spec :: Spec
 spec = describe "AST interpreter" $ do
     it "Interprets example program" $ do

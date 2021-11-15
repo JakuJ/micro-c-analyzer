@@ -1,8 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module MicroC.Worklist.RoundRobin
-( roundRobin
+module MicroC.Worklist.Naive
+( naiveIterative
 , module MicroC.Worklist
 ) where
 
@@ -16,8 +16,8 @@ import           MicroC.ProgramGraph
 import           MicroC.Worklist
 
 -- | An implementation of the Round Robin worklist algorithm.
-roundRobin :: forall m. WorklistAlgorithm m
-roundRobin pg = Solution mem (-1) -- We do not care about iteration counting
+naiveIterative :: forall m. WorklistAlgorithm m
+naiveIterative pg = Solution mem (-1) -- We do not care about iteration counting
   where
     mem :: Assignment m
     mem = execState go M.empty

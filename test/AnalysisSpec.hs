@@ -25,10 +25,10 @@ import           MicroC.Parser                       (parseFile)
 import           MicroC.ProgramGraph                 (PG, toPG)
 import           MicroC.Worklist                     (solution, worklist)
 import           MicroC.Worklist.ChaoticIteration    (Chaotic)
+import           MicroC.Worklist.Naive               (naiveIterative)
 import           MicroC.Worklist.PendingSet          (PendingSet)
 import           MicroC.Worklist.PostOrder           (PostOrder)
 import           MicroC.Worklist.Queue               (Queue)
-import           MicroC.Worklist.RoundRobin          (roundRobin)
 import           MicroC.Worklist.Stack               (Stack)
 import           System.IO.Silently                  (silence)
 import           Test.Hspec
@@ -64,7 +64,7 @@ testAnalysis graphs name = describe name $ do
   where
     sameResult = shouldBe `on` (^. solution)
     names = ["Naive Round Robin", "Stack", "Queue", "Chaotic Iteration", "Simple Post-Order", "Post-Order with Pending Set"]
-    algos = [roundRobin @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PostOrder @m, worklist @PendingSet @m]
+    algos = [naiveIterative @m, worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PostOrder @m, worklist @PendingSet @m]
 
 testIACorrectness :: Spec
 testIACorrectness = describe "memory after running consistent with Interval Analysis" $ do
@@ -72,7 +72,7 @@ testIACorrectness = describe "memory after running consistent with Interval Anal
     it [i|#{prog}.c|] $ do
       Right ast <- liftIO $ parseFile [i|sources/#{prog}.c|]
       let pg = toPG ast
-          Abs lastState = (roundRobin @IA pg ^. solution) M.! (-1)
+          Abs lastState = (naiveIterative @IA pg ^. solution) M.! (-1)
           mem = fst $ runWithInput ast "42"
       forM_ (M.assocs mem) $ \(lv, v) -> do
         v `shouldSatisfy` (\k -> toInteger k `member` (lastState M.! lval2ID lv))
