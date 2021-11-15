@@ -40,7 +40,7 @@ gen (_, action, _) = case action of
   ReadAction (ArrayIndex _ ix)      -> fv ix
   ReadAction _                      -> S.empty
   BoolAction rv                     -> fv rv
-  DeclAction _                      -> S.empty
+  _                                 -> S.empty
 
 fv :: RValue a -> S.Set ID
 fv (Reference lv)  = fv' lv

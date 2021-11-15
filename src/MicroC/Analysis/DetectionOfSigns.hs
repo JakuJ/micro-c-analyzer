@@ -1,8 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module MicroC.Analysis.DetectionOfSigns where
--- ( DS
--- ) where
+module MicroC.Analysis.DetectionOfSigns
+( DS
+) where
 
 import           Control.Lens                        ((^..))
 import           Data.Data.Lens                      (biplate)

@@ -61,10 +61,13 @@ instance Arbitrary Statement where
                 , RecordAssignment <$> identifier <*> replicateM 3 (arbitrary ./ 3) -- always 3 fields for the sake of simplicity
                 , IfThen <$> step n arbitrary <*> listOf' arbitrary
                 , IfThenElse <$> step n arbitrary <*> listOf' arbitrary <*> listOf' arbitrary
-                , While <$> step n arbitrary <*> listOf' arbitrary
+                , While <$> step n arbitrary <*> listOf' arbitraryWithBreaks
                 , Read <$> step n arbitrary
                 , Write <$> step n arbitrary]
     in branch n [Read <$> step n arbitrary] other
+
+arbitraryWithBreaks :: Gen Statement
+arbitraryWithBreaks = frequency [(8, arbitrary), (1, pure Break), (1, pure Continue)]
 
 instance Arbitrary OpArith where
   arbitrary = genericArbitrary uniform

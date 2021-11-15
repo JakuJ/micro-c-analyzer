@@ -30,6 +30,5 @@ instance Analysis DV where
     ReadAction lv -> case lv of
       ArrayIndex _ _ -> s
       _              -> S.delete (lval2ID lv) s
-    -- writing and booleans do not affect memory
-    WriteAction _ -> s
-    BoolAction _  -> s
+    -- writing, booleans and break/continue do not affect memory
+    _ -> s

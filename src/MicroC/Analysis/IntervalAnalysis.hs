@@ -107,7 +107,6 @@ evalAction = \case
   DeclAction   de     -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
   AssignAction lv rv  -> (lv .==) =<< evalExpr rv
   ReadAction   lv     -> lv .== top
-  WriteAction  _      -> pure ()
   BoolAction   action -> do
     current <- use intervals
     let usedIDs = nub $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
@@ -180,6 +179,7 @@ evalAction = \case
             Neq -> if | a == b && b == c && c == d -> No
                       | null $ l `infimum` r       -> Yes
                       | otherwise                  -> Dunno
+  _ -> pure ()
 
 -- INTERVAL DIVISION
 
