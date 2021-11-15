@@ -109,15 +109,13 @@ stmToPG :: StateNum -> StateNum -> Statement -> NodeM PG
 stmToPG qs _ Break = do
   loopz <- use loops
   case loopz of
-    []          -> error "Program Graph generation: Illegal break statement!"
-    (_, qe'):xs -> do loops .= xs
-                      return [(qs, BreakAction, qe')]
+    []         -> error "Program Graph generation: Illegal break statement!"
+    (_, qe'):_ -> do return [(qs, BreakAction, qe')]
 stmToPG qs _ Continue =  do
   loopz <- use loops
   case loopz of
-    [] ->  error "Program Graph generation: Illegal continue statement!"
-    (qs', _):xs -> do loops .= xs
-                      return [(qs, ContinueAction, qs')]
+    []         ->  error "Program Graph generation: Illegal continue statement!"
+    (qs', _):_ -> do return [(qs, ContinueAction, qs')]
 stmToPG qs qe (Write r) = pure [(qs, WriteAction r, qe)]
 stmToPG qs qe (Read l) = pure [(qs, ReadAction l, qe)]
 stmToPG qs qe (Assignment l r) = pure [(qs, AssignAction l r, qe)]
@@ -136,10 +134,11 @@ stmToPG qs qe (IfThenElse (test -> (yes, no)) body els) =
   (++) <$> branchThrough qs qe yes body <*> branchThrough qs qe no els
 
 stmToPG qs qe (While (test -> (yes, no)) body) = do
-  let l = length $ filter (\s -> s == Break || s == Continue) body
-  forM_ [1..l] $ \_ -> do
-    loops %= ((qs, qe) :)
-  ((qs, no, qe) :) <$> branchThrough qs qs yes body
+  loops %= ((qs, qe) :)
+  res <- ((qs, no, qe) :) <$> branchThrough qs qs yes body
+  loopz <- use loops
+  loops .= tail loopz
+  return res
 
 branchThrough :: StateNum -> StateNum -> Action -> Statements -> NodeM PG
 branchThrough qs qe branch body = do
