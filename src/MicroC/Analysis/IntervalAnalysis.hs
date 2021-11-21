@@ -93,7 +93,6 @@ evalOp op i1 i2 = normalize $ case op of
   Mult -> i1 * i2
   Div  -> i1 `idiv` i2
   Mod  -> i1 `imod` i2
-  _    -> top -- TODO: Other operators
 
 data Branches
   = Impossible -- {}

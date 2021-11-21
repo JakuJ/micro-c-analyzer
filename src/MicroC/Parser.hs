@@ -99,8 +99,6 @@ tArith (A.Minus a b)     = C.OpA (tArith a) C.Sub (tArith b)
 tArith (A.Mult a b)      = C.OpA (tArith a) C.Mult (tArith b)
 tArith (A.Div a b)       = C.OpA (tArith a) C.Div (tArith b)
 tArith (A.Mod a b)       = C.OpA (tArith a) C.Mod (tArith b)
-tArith (A.BitAnd a b)    = C.OpA (tArith a) C.BitAnd (tArith b)
-tArith (A.BitOr a b)     = C.OpA (tArith a) C.BitOr (tArith b)
 
 tBool :: A.Boolean -> C.RValue 'C.CBool
 tBool A.True              = C.Literal True

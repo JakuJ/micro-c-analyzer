@@ -35,19 +35,19 @@ import           Control.Lens (Plated, makePrisms)
 import           Data.Data
 import           GHC.Generics (Generic)
 
--- | Represents a type in the MicroC
+-- | Represents a type in the MicroC language.
 data CType
   -- | The __int__ type.
   = CInt
   -- | The type of Boolean expressions.
   | CBool
 
--- | An injective mapping from MicroC types to the Haskell types used to represent their runtime values.
+-- | A mapping from MicroC types to the Haskell types used to represent their runtime values.
 type family TypeRepr (t :: CType) where
   TypeRepr 'CInt = Int
   TypeRepr 'CBool = Bool
 
--- | A type alias for identifiers. Leaves room to change 'String' to 'Text' later.
+-- | A type alias for identifiers.
 type Identifier = String
 
 -- | Represents a single declaration.
@@ -56,11 +56,11 @@ data Declaration
   = VariableDecl Identifier
   -- | Declaration of an array with a given size and name.
   | ArrayDecl Int Identifier
-  -- | Declaration of a record with a given name.
+  -- | Declaration of a record with a given name and fields.
   | RecordDecl Identifier [Identifier]
     deriving (Eq, Show, Data)
 
--- | A type alias for declarations. Leaves room to change the list to a recursive datatype if need be.
+-- | A type alias for a list of declarations.
 type Declarations = [Declaration]
 
 -- $expressions
@@ -100,8 +100,8 @@ deriving instance Eq (LValue t)
 deriving instance Ord (LValue t)
 deriving instance Data (LValue 'CInt)
 
--- | Arithmetic operators, including bitwise operations.
-data OpArith = Add | Sub | Mult | Div | Mod | BitAnd | BitOr
+-- | Arithmetic operators.
+data OpArith = Add | Sub | Mult | Div | Mod
   deriving (Show, Eq, Ord, Data, Generic)
 
 -- | Relational operators.
@@ -113,7 +113,7 @@ data OpBool = And | Or
   deriving (Show, Eq, Ord, Data, Generic)
 
 -- | A statement is a top-level construct that does not evaluate to a value,
--- but otherwise advances the control flow of a program.
+-- but advances the control flow of a program.
 data Statement
   -- | An assignment of an R-value to an L-value.
   = Assignment (LValue 'CInt) (RValue 'CInt)
@@ -129,13 +129,15 @@ data Statement
   | Read (LValue 'CInt)
   -- | A __write__ statement.
   | Write (RValue 'CInt)
+  -- | A __continue__ statement.
   | Continue
+  -- | A __break__ statement.
   | Break
     deriving (Show, Eq, Ord, Data)
 
 deriving instance Plated Statement
 
--- | A type alias for statements. Leaves room to change the list to a recursive datatype if need be.
+-- | A type alias for a list of statements.
 type Statements = [Statement]
 
 -- | Represents a complete MicroC program.

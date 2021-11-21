@@ -46,8 +46,6 @@ Div . Arith3 ::= Arith3 "/" Arith4 ;
 Mult . Arith3 ::= Arith3 "*" Arith4 ;
 Plus . Arith2 ::= Arith2 "+" Arith3 ;
 Minus . Arith2 ::= Arith2 "-" Arith3 ;
-BitAnd . Arith1 ::= Arith1 "&" Arith2 ;
-BitOr . Arith ::= Arith "|" Arith1 ;
 
 _ . Arith4 ::= "(" Arith ")" ;
 _ . Arith3 ::= Arith4 ;

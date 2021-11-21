@@ -10,7 +10,6 @@ module MicroC.Interpreter
 
 import           Control.Lens               hiding (op)
 import           Control.Monad.State.Strict
-import           Data.Bits                  ((.&.), (.|.))
 import           Data.Map.Strict            (Map, empty)
 import           MicroC.AST
 
@@ -111,13 +110,11 @@ evalR (Literal v) = pure v
 evalR (OpA l op r) = op2fun op <$> evalR l <*> evalR r
   where
     op2fun = \case
-      Add    -> (+)
-      Sub    -> (-)
-      Mult   -> (*)
-      Div    -> div
-      Mod    -> mod
-      BitAnd -> (.&.)
-      BitOr  -> (.|.)
+      Add  -> (+)
+      Sub  -> (-)
+      Mult -> (*)
+      Div  -> div
+      Mod  -> mod
 evalR (OpB l op r) = op2fun op <$> evalR l <*> evalR r
   where
     op2fun = \case
