@@ -16,16 +16,17 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - data-interval
+- deque
 - extended-reals
 - lens
 - mtl
+- optparse-applicative
 - string-interpolate
-- deque
 # test deps added globally to avoid project recompilation
 # when changing between "stack run" and "stack test"
+- generic-random
 - hspec
 - QuickCheck
-- generic-random
 - silently
 
 default-extensions:

@@ -32,7 +32,7 @@ import           MicroC.Worklist.Queue               (Queue)
 import           MicroC.Worklist.Stack               (Stack)
 import           System.IO.Silently                  (silence)
 import           Test.Hspec
-import           Test.Hspec.QuickCheck               (prop)
+import           Test.Hspec.QuickCheck               (modifyMaxSize, prop)
 
 spec :: Spec
 spec = do
@@ -52,10 +52,10 @@ testAnalysis graphs name = describe name $ do
       forM_ graphs $ \pg -> do
         let sol = algo pg ^. solution
         silence (print sol) `shouldReturn` ()
-    prop "terminates on arbitrary programs" $ \prog -> do
-      let pg = toPG prog
-          sol = algo pg ^. solution
-      silence (print sol) `shouldReturn` ()
+    modifyMaxSize (const 50) $ prop "terminates on arbitrary programs" $ \prog -> do
+        let pg = toPG prog
+            sol = algo pg ^. solution
+        silence (print sol) `shouldReturn` ()
   parallel $ describe "different worklist algos return the same results" $ do
     let results = map (`map` graphs) algos
         comp = zipWithM_ sameResult

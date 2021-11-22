@@ -226,6 +226,7 @@ fromRatioInterval iv = toI a <=..<= toI b
     toI' (x :% y) = Finite $ x `quot` y
 
 -- INTERVAL MODULO
+-- https://stackoverflow.com/a/56918042/11365033
 
 imod :: Interval -> Interval -> Interval
 imod i1@(bounds -> (a, b)) i2@(bounds -> (m, n))
