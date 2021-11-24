@@ -3,10 +3,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module RunAnalysis
-( analyseFile
+( runAnalysis
 ) where
 
-import           ArgParse            (AlgorithmType (..))
+import           ArgParse
+import           Benchmark           (benchmark)
 import           Control.Lens        ((^.))
 import           Control.Monad       (forM_, when)
 import qualified Data.Map            as M
@@ -15,14 +16,18 @@ import           MicroC.DFS          (dfs, edges, orderStates)
 import           MicroC.Parser       (parseFile)
 import           MicroC.ProgramGraph (Edge, toPG)
 
-chooseAlgorithm :: AlgorithmType -> WorklistAlgorithm m
-chooseAlgorithm = \case
-  NaiveAlgorithm     -> naiveIterative
-  ChaoticWorklist    -> worklist @Chaotic
-  QueueWorklist      -> worklist @Queue
-  StackWorklist      -> worklist @Stack
-  PostOrderWorklist  -> worklist @PostOrder
-  PendingSetWorklist -> worklist @PendingSet
+runAnalysis :: Args -> IO ()
+runAnalysis Benchmark = benchmark
+runAnalysis (Analyse an algo path) = case an of
+  FaintVariables      -> analyse @FV
+  DangerousVariables  -> analyse @DV
+  DetectionOfSigns    -> analyse @DS
+  IntervalAnalysis    -> analyse @IA
+  LiveVariables       -> analyse @LV
+  ReachingDefinitions -> analyse @RD
+  where
+    analyse :: forall m. (Analysis m, Show (Result m)) => IO ()
+    analyse = analyseFile @m algo path
 
 analyseFile :: forall m. (Analysis m, Show (Result m)) => AlgorithmType -> FilePath -> IO ()
 analyseFile algoT path = do
@@ -51,3 +56,12 @@ analyseFile algoT path = do
   where
     printEdge :: Edge -> String
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a
+
+chooseAlgorithm :: AlgorithmType -> WorklistAlgorithm m
+chooseAlgorithm = \case
+  NaiveAlgorithm     -> naiveIterative
+  ChaoticWorklist    -> worklist @Chaotic
+  QueueWorklist      -> worklist @Queue
+  StackWorklist      -> worklist @Stack
+  PostOrderWorklist  -> worklist @PostOrder
+  PendingSetWorklist -> worklist @PendingSet
