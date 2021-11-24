@@ -22,6 +22,7 @@ data AlgorithmType
   | StackWorklist
   | PostOrderWorklist
   | PendingSetWorklist
+    deriving (Eq)
 
 data Args = Benchmark | Analyse AnalysisType AlgorithmType FilePath
 
@@ -67,5 +68,3 @@ algo = str >>= \case
 
 parseBenchmark :: Parser Args
 parseBenchmark = (Benchmark <$) . switch $ long "benchmark" <> short 'b' <> help "Execute benchmarks."
-
-

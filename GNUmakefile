@@ -7,6 +7,7 @@ ALEX       = alex
 ALEX_OPTS  = --ghc
 DIR		   = src/Grammar
 EXECUTABLE = micro-c-analyzer-exe
+ARGS = -- analyse interval post-order sources/even.c
 
 # List of goals not corresponding to file names.
 
@@ -37,25 +38,25 @@ clean :
 # Uses the zsh 'time' utility to see how much CPU we used
 bench:
 	stack build
-	stack exec -- $(EXECUTABLE) +RTS -s
+	stack exec -- $(EXECUTABLE) +RTS -s $(ARGS)
 
 # Show parallel performance info
 threadscope:
 	stack build
-	stack exec -- $(EXECUTABLE) +RTS -ls -s
+	stack exec -- $(EXECUTABLE) +RTS -ls -s $(ARGS)
 	threadscope $(EXECUTABLE).eventlog
 
 # Show memory usage info
 memory:
 	stack build --profile
-	stack exec --profile -- $(EXECUTABLE) +RTS -hy -L200 -i0.001 -l-au
+	stack exec --profile -- $(EXECUTABLE) +RTS -hy -L200 -i0.001 -l-au $(ARGS)
 	eventlog2html $(EXECUTABLE).eventlog
 	open $(EXECUTABLE).eventlog.html
 
 # Show profiling info
 profiteur:
 	stack build --profile
-	stack exec --profile -- $(EXECUTABLE) +RTS -p
+	stack exec --profile -- $(EXECUTABLE) +RTS -p $(ARGS)
 	profiteur $(EXECUTABLE).prof
 	open $(EXECUTABLE).prof.html
 

@@ -2,13 +2,12 @@
 
 module MicroC.Worklist.PendingSet
 ( PendingSet(..)
-, module MicroC.Worklist
 ) where
 
 import qualified Data.Set            as S
-import           MicroC.DFS
+import           MicroC.DFS          (orderStates)
 import           MicroC.ProgramGraph (StateNum)
-import           MicroC.Worklist
+import           MicroC.Worklist     (Worklist (..))
 
 newtype PendingSet = PendingSet ([StateNum], S.Set StateNum)
 

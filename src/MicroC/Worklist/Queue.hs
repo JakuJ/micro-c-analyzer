@@ -1,16 +1,15 @@
 module MicroC.Worklist.Queue
 ( Queue(..)
-, module MicroC.Worklist
 ) where
 
-import qualified Deque.Lazy          as D
+import           Deque.Lazy          (Deque, snoc, uncons)
 import           MicroC.ProgramGraph (StateNum)
-import           MicroC.Worklist
+import           MicroC.Worklist     (Worklist (..))
 
-newtype Queue = Queue (D.Deque StateNum)
+newtype Queue = Queue (Deque StateNum)
   deriving (Eq, Semigroup, Monoid)
 
 instance Worklist Queue where
   empty = mempty
-  insert x (Queue q) = Queue (D.snoc x q)
-  extract _ (Queue q) = fmap Queue <$> D.uncons q
+  insert x (Queue q) = Queue (snoc x q)
+  extract _ (Queue q) = fmap Queue <$> uncons q

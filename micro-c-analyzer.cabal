@@ -25,6 +25,7 @@ source-repository head
 library
   exposed-modules:
       ArgParse
+      Benchmark
       Data.Lattice
       Grammar.Abs
       Grammar.ErrM
@@ -32,6 +33,7 @@ library
       Grammar.Par
       Grammar.Print
       Grammar.Skel
+      MicroC
       MicroC.Analysis
       MicroC.Analysis.DangerousVariables
       MicroC.Analysis.DetectionOfSigns
@@ -40,7 +42,6 @@ library
       MicroC.Analysis.LiveVariables
       MicroC.Analysis.ReachingDefinitions
       MicroC.AST
-      MicroC.Benchmark
       MicroC.DFS
       MicroC.ID
       MicroC.Parser
@@ -52,6 +53,7 @@ library
       MicroC.Worklist.PostOrder
       MicroC.Worklist.Queue
       MicroC.Worklist.Stack
+      RunAnalysis
   other-modules:
       Paths_micro_c_analyzer
   hs-source-dirs:

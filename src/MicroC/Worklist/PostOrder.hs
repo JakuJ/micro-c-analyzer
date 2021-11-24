@@ -1,12 +1,11 @@
 module MicroC.Worklist.PostOrder
 ( PostOrder(..)
-, module MicroC.Worklist
 ) where
 
 import           Control.Lens        ((^.))
-import           MicroC.DFS
+import           MicroC.DFS          (orderStates, state0)
 import           MicroC.ProgramGraph (StateNum)
-import           MicroC.Worklist
+import           MicroC.Worklist     (Worklist (..))
 
 newtype PostOrder = PostOrder ([StateNum], Bool)
 

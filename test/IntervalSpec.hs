@@ -5,7 +5,7 @@ module IntervalSpec (spec) where
 import           Control.Exception                (evaluate)
 import           Data.ExtendedReal
 import           Data.IntegerInterval             (member, (<=..<=))
-import           MicroC.Analysis.IntervalAnalysis
+import           MicroC.Analysis.IntervalAnalysis (idiv)
 import           Test.Hspec
 import           Test.Hspec.QuickCheck            (prop)
 import           Test.QuickCheck                  (discard)

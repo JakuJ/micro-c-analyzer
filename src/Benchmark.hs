@@ -1,27 +1,16 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module MicroC.Benchmark
+module Benchmark
 ( benchmark
 ) where
 
-import           Control.Monad
-import           Data.List                           (intercalate)
-import           Data.String.Interpolate             (i)
-import           MicroC.Analysis
-import           MicroC.Analysis.DangerousVariables  (DV)
-import           MicroC.Analysis.DetectionOfSigns    (DS)
-import           MicroC.Analysis.FaintVariables      (FV)
-import           MicroC.Analysis.IntervalAnalysis    (IA)
-import           MicroC.Analysis.LiveVariables       (LV)
-import           MicroC.Analysis.ReachingDefinitions (RD)
-import           MicroC.Parser
-import           MicroC.ProgramGraph
-import           MicroC.Worklist.ChaoticIteration    (Chaotic)
-import           MicroC.Worklist.PostOrder
-import           MicroC.Worklist.PendingSet    (PendingSet)
-import           MicroC.Worklist.Queue               (Queue)
-import           MicroC.Worklist.Stack               (Stack)
+import           Control.Monad           (forM, forM_)
+import           Data.List               (intercalate)
+import           Data.String.Interpolate (i)
+import           MicroC
+import           MicroC.Parser           (parseFile)
+import           MicroC.ProgramGraph     (PG, toPG)
 
 benchmark :: IO ()
 benchmark = do
@@ -43,8 +32,8 @@ benchAnalysis pg analysis = do
     putStrLn [i|#{its}\t#{algoName}|]
   putStrLn ""
   where
-    names = ["Stack", "Queue", "Chaotic Iteration", "Post-Order Worklist with pending set"]
-    algos = [worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PendingSet @m]
+    names = ["Chaotic Iteration", "Stack", "Queue", "Post-Order Worklist", "Post-Order Worklist with pending set"]
+    algos = [worklist @Chaotic @m, worklist @Stack @m, worklist @Queue @m, worklist @PostOrder @m, worklist @PendingSet @m]
 
 -- | Returns a list of program graphs of the example programs from the "sources" folder.
 programGraphs :: IO [(String, PG)]

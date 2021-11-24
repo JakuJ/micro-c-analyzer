@@ -1,12 +1,11 @@
 module MicroC.Worklist.ChaoticIteration
 ( Chaotic(..)
-, module MicroC.Worklist
 ) where
 
 import qualified Data.Set            as S
 import qualified Data.Set.Internal   as S
 import           MicroC.ProgramGraph (StateNum)
-import           MicroC.Worklist
+import           MicroC.Worklist     (Worklist (..))
 
 newtype Chaotic = Chaotic (S.Set StateNum)
   deriving (Eq)

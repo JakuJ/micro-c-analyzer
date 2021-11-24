@@ -1,10 +1,9 @@
 module MicroC.Worklist.Stack
 ( Stack(..)
-, module MicroC.Worklist
 ) where
 
 import           MicroC.ProgramGraph (StateNum)
-import           MicroC.Worklist
+import           MicroC.Worklist     (Worklist (..))
 
 newtype Stack = Stack [StateNum]
   deriving (Eq)

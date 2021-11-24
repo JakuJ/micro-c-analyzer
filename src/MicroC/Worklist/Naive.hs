@@ -3,7 +3,6 @@
 
 module MicroC.Worklist.Naive
 ( naiveIterative
-, module MicroC.Worklist
 ) where
 
 import           Control.Lens
@@ -12,7 +11,7 @@ import           Data.Lattice
 import qualified Data.Map.Lazy            as M
 import qualified Data.Set                 as S
 import           MicroC.Analysis
-import           MicroC.ProgramGraph
+import           MicroC.ProgramGraph      (allStates)
 import           MicroC.Worklist
 
 -- | An implementation of the Round Robin worklist algorithm.
