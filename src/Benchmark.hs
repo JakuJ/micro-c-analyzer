@@ -18,9 +18,9 @@ benchmark = do
   forM_ graphs $ \(name, pg) -> do
     putStrLn [i|===== #{name}.c =====\n|]
     benchAnalysis @RD pg "Reaching Definitions"
-    benchAnalysis @DV pg "Dangerous Variables"
     benchAnalysis @LV pg "Live Variables"
     benchAnalysis @FV pg "Faint Variables"
+    benchAnalysis @DV pg "Dangerous Variables"
     benchAnalysis @DS pg "Detection of Signs"
     benchAnalysis @IA pg "Interval Analysis"
 
@@ -32,7 +32,7 @@ benchAnalysis pg analysis = do
     putStrLn [i|#{its}\t#{algoName}|]
   putStrLn ""
   where
-    names = ["Chaotic Iteration", "Stack", "Queue", "Post-Order Worklist", "Post-Order Worklist with pending set"]
+    names = ["Stack", "Queue", "Chaotic Iteration", "Post-Order Worklist", "Post-Order Worklist with pending set"]
     algos = [worklist @Chaotic @m, worklist @Stack @m, worklist @Queue @m, worklist @PostOrder @m, worklist @PendingSet @m]
 
 -- | Returns a list of program graphs of the example programs from the "sources" folder.
@@ -44,7 +44,7 @@ programGraphs = do
     Left errs -> fail (intercalate "\n" errs)
 
 programs :: [String]
-programs =  [ "even"
-            , "factorial"
+programs =  [ "determine_sign"
+            , "even"
             , "insertion_sort"
             ]
