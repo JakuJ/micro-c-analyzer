@@ -33,7 +33,7 @@ benchAnalysis pg analysis = do
   putStrLn ""
   where
     names = ["Stack", "Queue", "Chaotic Iteration", "Post-Order Worklist", "Post-Order Worklist with pending set"]
-    algos = [worklist @Chaotic @m, worklist @Stack @m, worklist @Queue @m, worklist @PostOrder @m, worklist @PendingSet @m]
+    algos = [worklist @Stack @m, worklist @Queue @m, worklist @Chaotic @m, worklist @PostOrder @m, worklist @PendingSet @m]
 
 -- | Returns a list of program graphs of the example programs from the "sources" folder.
 programGraphs :: IO [(String, PG)]
