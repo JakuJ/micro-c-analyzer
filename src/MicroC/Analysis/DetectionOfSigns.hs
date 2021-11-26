@@ -58,8 +58,7 @@ instance Analysis DS where
     DeclAction (VariableDecl x) -> State $ M.insert (VariableID x) (only Zero) result
     DeclAction (ArrayDecl _ a) -> State $ M.insert (ArrayID a) (only Zero) result
     DeclAction (RecordDecl r fields) -> State $ foldr (\field acc -> M.insert (FieldID r field) (only Zero) acc) result fields
-    -- TODO: Bounds check
-    AssignAction (AST.ArrayIndex a _) rval -> State $ M.insertWith supremum (ArrayID a) (arithmeticSign rval (State result)) result
+    AssignAction (AST.ArrayIndex arr a1) a2 -> if (arithmeticSign a1 (State result) `infimum`  Poset (S.fromList [Zero, Plus])) /= Poset S.empty then State $ M.insertWith supremum (ArrayID arr) (arithmeticSign a2 (State result)) result else bottom
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
     ReadAction lval -> State $ M.insert (lval2ID lval) top result
     BoolAction rval -> State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))
@@ -73,7 +72,7 @@ arithmeticSign (Literal x) _
   | x > 0 = Poset (S.singleton Plus)
   | x == 0 = Poset (S.singleton Zero)
   | x < 0 = Poset (S.singleton Minus)
-arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeticSign rval (State state) `infimum` Poset (S.fromList [Zero, Plus])) /= bottom
+arithmeticSign (Reference (AST.ArrayIndex a rval)) (State state) = if (arithmeticSign rval (State state) `infimum` Poset (S.fromList [Zero, Plus])) /= Poset S.empty
                                                                   -- then fromMaybe bottom $ M.lookup (ArrayID a) state
                                                                   then fromMaybe bottom $ M.lookup (ArrayID a) state
                                                                   else bottom
