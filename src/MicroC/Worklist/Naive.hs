@@ -11,7 +11,7 @@ import           Data.Lattice
 import qualified Data.Map.Lazy            as M
 import qualified Data.Set                 as S
 import           MicroC.Analysis
-import           MicroC.ProgramGraph      (allStates)
+import           MicroC.ProgramGraph
 import           MicroC.Worklist
 
 -- | An implementation of the Round Robin worklist algorithm.
@@ -52,6 +52,12 @@ naiveIterative pg = Solution mem (-1) -- We do not care about iteration counting
           pure False
 
 -- HELPER FUNCTIONS
+
+-- | Flip the order of states in an edge for backward analyses.
+stateOrder :: forall m. Analysis m => Edge -> (StateNum, StateNum)
+stateOrder (qs, _, qe) = case direction @m of
+  Forward  -> (qs, qe)
+  Backward -> (qe, qs)
 
 -- | Check if any element of a list maps to `True` under a monadic predicate.
 anyM :: Monad m => [a] -> (a -> m Bool) -> m Bool

@@ -22,16 +22,9 @@ dependencies:
 - mtl
 - optparse-applicative
 - string-interpolate
-# test deps added globally to avoid project recompilation
-# when changing between "stack run" and "stack test"
-- generic-random
-- hspec
-- QuickCheck
-- silently
 
 default-extensions:
 - DataKinds
-- DefaultSignatures
 - DeriveDataTypeable
 - DeriveGeneric
 - DerivingVia
@@ -65,6 +58,10 @@ ghc-options:
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
   - -Wredundant-constraints
+  # warnings disabled for the generated grammar modules
+  - -Wno-missing-signatures
+  - -Wno-orphans
+  - -Wno-missing-pattern-synonym-signatures
 
 library:
   source-dirs: src
@@ -92,3 +89,7 @@ tests:
     - -Wno-orphans
     dependencies:
     - micro-c-analyzer
+    - generic-random
+    - hspec
+    - QuickCheck
+    - silently

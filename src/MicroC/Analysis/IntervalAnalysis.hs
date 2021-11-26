@@ -104,7 +104,9 @@ data Branches
 evalAction :: Action -> Eval ()
 evalAction = \case
   DeclAction   de     -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
-  AssignAction lv rv  -> (lv .==) =<< evalExpr rv
+  AssignAction lv rv  -> do
+    v <- evalExpr rv
+    lv .== v
   ReadAction   lv     -> lv .== top
   BoolAction   action -> do
     current <- use intervals
@@ -116,7 +118,7 @@ evalAction = \case
         if outcomes == Yes || outcomes == Dunno
           then Just <$> use intervals
           else pure Nothing
-    let (Abs union) = foldr (supremum . Abs) (Abs M.empty) . catMaybes $ states
+    let (Abs union) = foldr (supremum . Abs) (Abs M.empty) $ catMaybes states
     intervals .= union
     where
       mapProduct :: [ID] -> M.Map ID Interval -> [M.Map ID Interval]
@@ -178,7 +180,7 @@ evalAction = \case
             Neq -> if | a == b && b == c && c == d -> No
                       | null $ l `infimum` r       -> Yes
                       | otherwise                  -> Dunno
-  _ -> pure ()
+  _ -> pure () -- write, jump
 
 -- INTERVAL DIVISION
 
@@ -280,9 +282,13 @@ imod1 x@(bounds -> (a, b)) m
 declaredArrays :: PG -> M.Map Identifier Int
 declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . itraversed
 
--- TODO: Make these not constant
+-- | The set (K) of interval bounds: [0, 1, 2, 5, 10, 100, 1000] and negatives.
 points :: S.Set Int'
-points = S.fromList . (0 :) . map Finite . concatMap (\x -> [x, -x]) $ map ((^) @Integer @Integer 10) [1 .. 3] ++ [1, 2, 5]
+points  = [1, 2, 5] ++ map (10^) [1 .. 6 :: Integer]
+        & concatMap (\x -> [x, -x])
+        & map Finite
+        & (0 :)
+        & S.fromList
 
 base :: [Interval]
 base = do

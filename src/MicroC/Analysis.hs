@@ -1,16 +1,13 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module MicroC.Analysis
 ( Analysis(..)
 , Direction(..)
-, forward
-, backward
 ) where
 
 import           Data.Lattice        (SemiLattice)
-import           MicroC.ProgramGraph (Edge, PG, StateNum)
+import           MicroC.ProgramGraph (Edge, PG)
 
 data Direction = Forward | Backward
   deriving (Eq)
@@ -25,17 +22,3 @@ class SemiLattice (Result m) => Analysis m where
   -- ^ The value assigned as an initial solution for the first state at the start of any worklist algorithm.
   analyze :: PG -> Edge -> Result m -> Result m
   -- ^ An analysis function. For bit-vector frameworks defined as S(edge, X) = (X \ kill(edge)) + gen(edge)
-  stateOrder :: Edge -> (StateNum, StateNum)
-  -- ^ The order of states in constraints, either `forward` or `backward`.
-
-  direction = Forward
-
-  stateOrder = case direction @m of
-    Forward  -> forward
-    Backward -> backward
-
-forward, backward :: Edge -> (StateNum, StateNum)
-forward (qs, _, qe) = (qs, qe)
--- ^ Edge state order for forward analyses.
-backward (qs, _, qe) = (qe, qs)
--- ^ Edge state order for backward analyses.

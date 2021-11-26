@@ -135,9 +135,8 @@ stmToPG qs qe (IfThenElse (test -> (yes, no)) body els) =
 stmToPG qs qe (While (test -> (yes, no)) body) = do
   loops %= ((qs, qe) :)
   res <- ((qs, no, qe) :) <$> branchThrough qs qs yes body
-  loopz <- use loops
-  loops .= tail loopz
-  return res
+  loops %= tail
+  pure res
 
 branchThrough :: StateNum -> StateNum -> Action -> Statements -> NodeM PG
 branchThrough qs qe branch body = do

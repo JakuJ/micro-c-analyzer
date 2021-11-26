@@ -33,4 +33,4 @@ instance Analysis FV where
     -- using stuff for writing / testing makes it live
     WriteAction a -> s `union` fv a
     BoolAction b  -> s `union` fv b
-    _             -> s
+    JumpAction    -> s
