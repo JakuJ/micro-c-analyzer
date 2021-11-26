@@ -284,7 +284,7 @@ declaredArrays = toMapOf $ traverse . _2 . _DeclAction . _ArrayDecl . swapped . 
 
 -- | The set (K) of interval bounds: [0, 1, 2, 5, 10, 100, 1000] and negatives.
 points :: S.Set Int'
-points  = [1, 2, 5] ++ map (10^) [1 .. 6 :: Integer]
+points  = [1, 2, 5] ++ map (10^) [1 .. 3 :: Integer]
         & concatMap (\x -> [x, -x])
         & map Finite
         & (0 :)

@@ -67,7 +67,7 @@ library:
   source-dirs: src
 
 executables:
-  micro-c-analyzer-exe:
+  micro-c-analyzer:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

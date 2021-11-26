@@ -91,7 +91,7 @@ library
     , string-interpolate
   default-language: Haskell2010
 
-executable micro-c-analyzer-exe
+executable micro-c-analyzer
   main-is: Main.hs
   other-modules:
       Paths_micro_c_analyzer
