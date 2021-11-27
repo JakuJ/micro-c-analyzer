@@ -42,7 +42,8 @@ analyseFile algoT path = do
       let pg = toPG ast
           Solution sol its = algo pg
           s0 = if direction @m == Forward then 0 else -1
-          tree = dfs s0 pg
+          pg' = if direction @m == Forward then pg else map (\(a, b, c) -> (c, b, a)) pg
+          tree = dfs s0 pg'
       putStrLn "Program Graph:"
       mapM_ (putStrLn . printEdge) pg
       when (algoT `elem` [PostOrderWorklist, PendingSetWorklist]) $ do
@@ -54,8 +55,9 @@ analyseFile algoT path = do
       case M.toList sol of
         []      -> print "Program is empty"
         (h : t) -> forM_ (t ++ [h]) $ \(st, lv) -> putStrLn $ show st <> "\t" <> show lv
-      putStr "Number of iterations: "
-      print its
+      when (its /= -1) $ do
+        putStr "Number of iterations: "
+        print its
   where
     printEdge :: Edge -> String
     printEdge (qs, a, qe) = show qs <> " -> " <> show qe <> " :: " <> show a

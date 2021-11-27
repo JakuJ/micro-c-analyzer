@@ -138,7 +138,6 @@ test-suite micro-c-analyzer-test
       AnalysisSpec
       ArbitraryInstances
       AuxillarySpec
-      Common
       IntervalSpec
       ParserSpec
       ProgGraphSpec

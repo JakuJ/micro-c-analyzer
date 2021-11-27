@@ -5,7 +5,7 @@
 module AnalysisSpec (spec) where
 
 import           ArbitraryInstances      ()
-import           Common
+import           Benchmark
 import           Control.Lens            ((^.))
 import           Control.Monad
 import           Data.Function           (on)
@@ -18,7 +18,7 @@ import           Test.Hspec.QuickCheck   (modifyMaxSize, prop)
 
 spec :: Spec
 spec = do
-  graphs <- runIO programGraphs
+  graphs <- runIO $ programGraphs allPrograms
   testAnalysis @RD graphs "Reaching Definitions"
   testAnalysis @DV graphs "Dangerous Variables"
   testAnalysis @LV graphs "Live Variables"

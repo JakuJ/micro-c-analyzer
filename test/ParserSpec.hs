@@ -1,6 +1,6 @@
 module ParserSpec (spec) where
 
-import           Common                  (programs)
+import           Benchmark               (allPrograms)
 import           Control.Monad           (forM_)
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Either             (isLeft, isRight)
@@ -20,7 +20,7 @@ spec = do
   it "invalid usage 1" $ parseProgram "int [3] R; if (false) {k :+ 2 + R;}" `shouldSatisfy` isLeft
   it "invalid usage 2" $ parseProgram "{int a; int b} R; if (true) {k :+ 2 + R;}" `shouldSatisfy` isLeft
   describe "Example programs" $
-    forM_ programs $ \program -> do
+    forM_ allPrograms $ \program -> do
       it (program <> ".c") $ do
         result <- liftIO $ parseFile [i|sources/#{program}.c|]
         result `shouldSatisfy` isRight
