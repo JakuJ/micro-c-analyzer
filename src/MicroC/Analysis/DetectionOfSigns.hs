@@ -37,13 +37,15 @@ instance Show Sign where
   show Zero  = "0"
   show Minus = "-"
 
-instance SemiLattice State where
-  bottom = State M.empty
+instance PartialOrder State where
   (State m1) `order` (State m2)
     = M.foldrWithKey (\k signs1 acc ->
         case M.lookup k m2 of
           Nothing       -> False
           (Just signs2) -> acc && signs1 `order` signs2) True m1
+
+instance SemiLattice State where
+  bottom = State M.empty
   supremum (State a) (State b) = State $ M.unionWith supremum a b
 
 instance Analysis DS where

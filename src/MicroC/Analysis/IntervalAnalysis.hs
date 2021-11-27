@@ -51,13 +51,15 @@ data IA
 newtype AbsMemory = Abs (M.Map ID Interval)
   deriving (Eq)
 
-instance SemiLattice AbsMemory where
-  bottom = Abs M.empty
+instance PartialOrder AbsMemory where
   (Abs m1) `order` (Abs m2)
       = M.foldrWithKey (\k int acc ->
           case M.lookup k m2 of
             Nothing     -> False
             (Just int2) -> acc && int `order` int2) True m1
+
+instance SemiLattice AbsMemory where
+  bottom = Abs M.empty
   supremum (Abs a) (Abs b) = Abs $ M.unionWith supremum a b
 
 instance Analysis IA where
