@@ -7,14 +7,15 @@ module RunAnalysis
 ) where
 
 import           ArgParse
-import           Benchmark           (benchmark)
-import           Control.Lens        ((^.))
-import           Control.Monad       (forM_, when)
-import qualified Data.Map            as M
+import           Benchmark               (benchmark)
+import           Control.Lens            ((^.))
+import           Control.Monad           (forM_, when)
+import qualified Data.Map                as M
+import           Data.String.Interpolate (i)
 import           MicroC
-import           MicroC.DFS          (dfs, edges, orderStates)
-import           MicroC.Parser       (parseFile)
-import           MicroC.ProgramGraph (Edge, toPG)
+import           MicroC.DFS              (dfs, edges, orderStates)
+import           MicroC.Parser           (parseFile)
+import           MicroC.ProgramGraph     (Edge, toPG)
 
 runAnalysis :: Args -> IO ()
 runAnalysis Benchmark = benchmark
@@ -34,7 +35,9 @@ analyseFile algoT path = do
   let algo = chooseAlgorithm @m algoT
   prog <- parseFile path
   case prog of
-    Left errs -> mapM_ putStrLn errs
+    Left errs -> do
+      putStrLn [i|Errors occurred in the source file #{path}\n|]
+      forM_ errs $ \e -> putStrLn [i|- #{e}|]
     Right ast -> do
       let pg = toPG ast
           Solution sol its = algo pg

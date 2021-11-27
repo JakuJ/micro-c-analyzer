@@ -28,7 +28,10 @@ module MicroC.AST
 , _RecordDecl
 , _ArrayDecl
 , _RecordAssignment
+, _Variable
+, _ArrayIndex
 , _FieldAccess
+, _Assignment
 ) where
 
 import           Control.Lens (Plated, makePrisms)
@@ -193,6 +196,8 @@ conNot = mkConstr tRValue "Not" [] Prefix
 
 tRValue :: DataType
 tRValue = mkDataType "MicroC.AST.RValue" [conRef, conLit, conOpA, conOpR, conOpB, conNot]
+
+deriving instance Plated (RValue 'CInt)
 
 -- OPTICS
 

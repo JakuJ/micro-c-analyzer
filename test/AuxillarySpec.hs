@@ -1,6 +1,6 @@
 module AuxillarySpec (spec) where
 
-import           Data.Set
+import           Data.Set                            (fromList)
 import           MicroC.Analysis.ReachingDefinitions (getAllNames)
 import           MicroC.ID                           (ID (..))
 import           MicroC.Parser                       (parseProgram)
@@ -10,7 +10,7 @@ import           Test.Hspec
 spec :: Spec
 spec = parallel $ do
     it "getAllNames" $ do
-      let source = "int x; {int fst; int snd; int trd} R; {int real; int imag} C; int[32] arr; y := C.real; R := (A2[3], x + z, 2); if (k <= f && k != f) {}"
+      let source = "int x; {int fst; int snd; int trd} R; {int real; int imag} C; int[32] arr; int[5] A2; y := C.real; R := (A2[3], x + z, 2); if (k <= f && k != f) {}"
           Right prog = parseProgram source
           pg = toPG prog
 

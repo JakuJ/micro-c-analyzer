@@ -186,7 +186,7 @@ absLe Minus Zero  = [True]
 absLe Zero Zero   = [True]
 absLe Zero Minus  = [False]
 absLe Zero Plus   = [True]
-absLe Plus Plus   =  [True, False]
+absLe Plus Plus   = [True, False]
 absLe Plus Zero   = [False]
 absLe Plus Minus  = [False]
 

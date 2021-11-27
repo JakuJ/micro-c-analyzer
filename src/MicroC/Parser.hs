@@ -4,17 +4,18 @@ module MicroC.Parser
 , parseProgram
 ) where
 
-import           Control.Lens              (universe, (<&>), (^..))
+import           Control.Lens              hiding (ix, op)
 import           Control.Monad.Writer.Lazy
 import           Data.Bifunctor            (first)
 import           Data.Data.Lens            (biplate)
 import qualified Data.Map.Lazy             as M
+import qualified Data.Set                  as S
 import           Data.String.Interpolate   (i)
 import qualified Grammar.Abs               as A
 import           Grammar.Par               (myLexer, pProgram)
 import           MicroC.AST
 import qualified MicroC.AST                as C
-import           MicroC.ProgramGraph       (declaredRecords)
+import           MicroC.ProgramGraph
 
 -- | A type for a collection of diagnostic messages.
 type Diagnostics = [String]
@@ -32,7 +33,13 @@ parseProgram :: String -> Either Diagnostics C.Program
 parseProgram source = do
   prog@(Program ds ss) <- first pure . fmap tProgram . pProgram . myLexer $ source
   let recs = declaredRecords ds
-  case execWriter $ checkFieldAccesses recs ss >> checkAssignments recs ss of
+      arrs = S.fromList $ ds ^.. traverse . _ArrayDecl . _2
+      res = execWriter $ do
+              checkFieldAccesses recs ss
+              checkRecordAssignments recs ss
+              checkArrays arrs ss
+              checkUsage (M.keysSet recs) arrs ss
+  case res of
     []   -> Right prog
     errs -> Left errs
 
@@ -43,17 +50,31 @@ checkFieldAccesses recs ss = do
   let fields = ss ^.. biplate @_ @(LValue 'CInt) . _FieldAccess
   forM_ fields $ \(r, f) -> do
     if M.member r recs
-      then unless (f `elem` recs M.! r) $ report [i|Record #{r} does not define a field named #{f}|]
-      else report [i|Undefined record: #{r}|]
+      then unless (f `elem` recs M.! r) $ report [i|Record "#{r}" does not define a field named "#{f}"|]
+      else report [i|Undefined record: "#{r}"|]
 
-checkAssignments :: M.Map Identifier [Identifier] -> Statements -> Writer Diagnostics ()
-checkAssignments recs ss = do
+checkRecordAssignments :: M.Map Identifier [Identifier] -> Statements -> Writer Diagnostics ()
+checkRecordAssignments recs ss = do
   let rass = concatMap universe ss ^.. traverse . _RecordAssignment <&> fmap length
   forM_ rass $ \(r, l) -> do
     let fs = length $ recs M.! r
     if M.member r recs
-      then when (l /= fs) $ report [i|Trying to assign #{l} values to record #{r} which was defined with #{fs} fields.|]
-      else report [i|Undefined record: #{r}|]
+      then when (l /= fs) $ report [i|Trying to assign #{l} values to record "#{r}" which was defined with #{fs} fields.|]
+      else report [i|Undefined record: "#{r}"|]
+
+checkArrays :: S.Set Identifier -> Statements -> Writer Diagnostics ()
+checkArrays arrs ss = do
+  let used = ss ^.. biplate @_ @(LValue 'CInt) . _ArrayIndex . _1
+  forM_ used $ \a -> unless (a `S.member` arrs) $ report [i|Undefined array: "#{a}"|]
+
+checkUsage :: S.Set Identifier -> S.Set Identifier -> Statements -> Writer Diagnostics ()
+checkUsage recs arrs ss = do
+  let usages = S.toList . S.fromList . concatMap universe $ ss ^.. biplate @_ @(RValue 'CInt)
+  forM_ usages $ \case
+    Reference (Variable x) -> do
+      when (x `S.member` recs) $ report [i|Cannot use record "#{x}" as a variable|]
+      when (x `S.member` arrs) $ report [i|Cannot use array "#{x}" as a variable|]
+    _ -> pure ()
 
 -- TRANSLATION
 
