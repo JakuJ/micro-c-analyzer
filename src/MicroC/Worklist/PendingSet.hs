@@ -9,16 +9,15 @@ import           MicroC.DFS          (orderStates)
 import           MicroC.ProgramGraph (StateNum)
 import           MicroC.Worklist     (Worklist (..))
 
-newtype PendingSet = PendingSet ([StateNum], S.Set StateNum)
+newtype PendingSet = PS ([StateNum], S.Set StateNum, S.Set StateNum)
 
 instance Worklist PendingSet where
-  empty = PendingSet ([], S.empty)
-  insert q (PendingSet (v, p)) = if q `elem` v then PendingSet (v, p) else PendingSet (v, S.insert q p)
-  extract st (PendingSet ([], p))
+  empty = PS ([], S.empty, S.empty)
+  insert q (PS (vrp, v, p)) = PS . (vrp, v,) $
+    if q `S.member` v then p else S.insert q p
+  extract st (PS ([], _,  p))
     | S.null p = Nothing
-    | otherwise = Just (q, PendingSet (v', S.empty))
+    | otherwise = Just (q, PS (v', S.fromList v', S.empty))
     where
       q : v' = filter (`S.member` p) $ orderStates st
-  extract _ (PendingSet (v, p)) = Just (q, PendingSet (v', p))
-    where
-      q : v' = v
+  extract _ (PS (q : v', v, p)) = Just (q, PS (v', S.delete q v, p))
