@@ -19,7 +19,6 @@ import           MicroC.Analysis
 import           MicroC.Analysis.ReachingDefinitions (getAllNames)
 import           MicroC.ID
 import           MicroC.ProgramGraph
-import Debug.Trace (traceId, traceShow, trace, traceShowId)
 
 data Sign = Minus | Zero | Plus
   deriving (Eq, Ord, Bounded, Enum)
@@ -60,7 +59,7 @@ instance Analysis DS where
     AssignAction (AST.ArrayIndex arr a1) a2 -> if (arithmeticSign a1 (State result) `infimum` Poset [Zero, Plus]) /= Poset [] then State $ M.insertWith supremum (ArrayID arr) (arithmeticSign a2 (State result)) result else bottom
     AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
     ReadAction lval -> State $ M.insert (lval2ID lval) top result
-    BoolAction rval -> if (foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` (traceShowId  usedIDs)) result))) == bottom then bottom else   State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` (traceShowId  usedIDs)) result))
+    BoolAction rval -> if (foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))) == bottom then bottom else   State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))
       where
         usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
     _ -> State result -- write, jump
