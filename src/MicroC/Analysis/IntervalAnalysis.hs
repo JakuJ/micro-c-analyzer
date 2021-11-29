@@ -340,14 +340,14 @@ instance Show AbsMemory where
     where
       pprint :: Interval -> String
       pprint iv
-        | null iv = "∈ {}"
+        | null iv = "in {}"
         | isSingleton iv = "= " <> pprint' (lowerBound iv)
         | otherwise = case (lowerBound iv, upperBound iv) of
           (NegInf, PosInf) -> ": any"
           (NegInf, x)      -> [i|<= #{pprint' x}|]
           (x, PosInf)      -> [i|>= #{pprint' x}|]
-          (a, b)           -> [i|∈ { #{pprint' a}..#{pprint' b} }|]
+          (a, b)           -> [i|in { #{pprint' a}..#{pprint' b} }|]
       pprint' :: Int' -> String
       pprint' (Finite x) = show x
-      pprint' NegInf     = "-∞"
-      pprint' PosInf     = "∞"
+      pprint' NegInf     = "-inf"
+      pprint' PosInf     = "inf"

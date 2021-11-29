@@ -5,7 +5,7 @@ ALEX       = alex
 ALEX_OPTS  = --ghc
 DIR		   = src/Grammar
 EXECUTABLE = micro-c-analyzer
-ARGS 	   = -- benchmark
+ARGS 	   = -- analyse interval pending-set sources/even.c
 
 # List of goals not corresponding to file names.
 
@@ -47,7 +47,7 @@ threadscope:
 # Show memory usage info
 memory:
 	stack build --profile
-	stack exec --profile -- $(EXECUTABLE) +RTS -hy -L200 -i0.001 -l-au $(ARGS)
+	stack exec --profile -- $(EXECUTABLE) +RTS -hy -L200 -i0.0001 -l-au $(ARGS)
 	eventlog2html $(EXECUTABLE).eventlog
 	open $(EXECUTABLE).eventlog.html
 
