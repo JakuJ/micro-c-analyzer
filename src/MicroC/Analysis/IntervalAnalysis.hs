@@ -4,6 +4,7 @@ module MicroC.Analysis.IntervalAnalysis
 ( IA
 , AbsMemory(..)
 , idiv
+, imod
 , between
 ) where
 

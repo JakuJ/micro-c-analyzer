@@ -5,11 +5,12 @@
 module ArbitraryInstances () where
 
 import           Control.Lens
-import           Control.Monad       (replicateM)
-import           Data.Data.Lens      (biplate)
-import           Data.List           (nub)
-import qualified Data.Map.Lazy       as M
-import           Data.Maybe          (fromMaybe)
+import           Control.Monad        (replicateM)
+import           Data.Data.Lens       (biplate)
+import           Data.IntegerInterval
+import           Data.List            (nub)
+import qualified Data.Map.Lazy        as M
+import           Data.Maybe           (fromMaybe)
 import           Generic.Random
 import           MicroC.AST
 import           MicroC.ProgramGraph
@@ -112,3 +113,11 @@ instance Arbitrary Action where
                 , BoolAction <$> step n arbitrary
                 ]
     branch n base base
+
+instance Arbitrary IntegerInterval where
+  arbitrary = do
+    a <- frequency [(9, Finite <$> arbitrary), (1, pure NegInf)]
+    b <- abs <$> frequency [(9, Finite <$> arbitrary), (1, pure PosInf)]
+    pure $ case b of
+      PosInf -> a <=..<= PosInf
+      x      -> a <=..<= a + x
