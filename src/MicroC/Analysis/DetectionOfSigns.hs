@@ -56,22 +56,24 @@ instance Analysis DS where
     DeclAction (VariableDecl x) -> State $ M.insert (VariableID x) (Poset [Zero]) result
     DeclAction (ArrayDecl _ a) -> State $ M.insert (ArrayID a) (Poset [Zero]) result
     DeclAction (RecordDecl r fields) -> State $ foldr (\field acc -> M.insert (FieldID r field) (Poset [Zero]) acc) result fields
-    AssignAction (AST.ArrayIndex arr a1) a2 -> if (arithmeticSign a1 (State result) `infimum` Poset [Zero, Plus]) /= Poset [] 
-                                                  && (arithmeticSign a2 (State result)) /= Poset []
+    AssignAction (AST.ArrayIndex arr a1) a2 -> if (arithmeticSign a1 (State result) `infimum` Poset [Zero, Plus]) /= Poset []
+                                                  && arithmeticSign a2 (State result) /= Poset []
                                                   && State result /= bottom
-                                               then State $ M.insertWith supremum (ArrayID arr) (arithmeticSign a2 (State result)) result 
+                                               then State $ M.insertWith supremum (ArrayID arr) (arithmeticSign a2 (State result)) result
                                                else bottom
     AssignAction x rval -> if State result == bottom then bottom else State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
-    ReadAction (AST.ArrayIndex arr a1) -> if (arithmeticSign a1 (State result) `infimum` Poset [Zero, Plus]) /= Poset [] 
+    ReadAction (AST.ArrayIndex arr a1) -> if (arithmeticSign a1 (State result) `infimum` Poset [Zero, Plus]) /= Poset []
                                                   && State result /= bottom
                                           then State $ M.insert (ArrayID arr) top result
                                           else bottom
     ReadAction lval -> if State result == bottom then bottom else  State $ M.insert (lval2ID lval) top result
-    BoolAction rval -> if (foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))) == bottom
-                      then bottom
-                      else   State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))
+    BoolAction rval -> if stateLeastUpperBound == bottom then bottom else unusedIDs `supremum` stateLeastUpperBound
       where
-        usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
+        usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt]) -- set of used IDs
+        unusedIDs = State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) -- state with un-used IDs
+        basics = basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result) -- list of basic states
+        anyTrue s = let Poset s' = boolSign rval s in S.member True s' -- function that checks whether a basic state makes the rval true
+        stateLeastUpperBound = foldr supremum bottom $ filter anyTrue basics -- join of all basic states that make the rval true
     _ -> State result -- write, jump
 
 -- ARITHMETIC
