@@ -52,14 +52,16 @@ instance Analysis DS where
   type Result DS = State
   direction = Forward
   initialValue pg = State $ M.fromList $ map (, top) $ S.toList (getAllNames pg)
-  analyze _ (_, action, _) (State result) = case action of
+  analyze _ (_, action, _) (State result) = case  action of
     DeclAction (VariableDecl x) -> State $ M.insert (VariableID x) (Poset [Zero]) result
     DeclAction (ArrayDecl _ a) -> State $ M.insert (ArrayID a) (Poset [Zero]) result
     DeclAction (RecordDecl r fields) -> State $ foldr (\field acc -> M.insert (FieldID r field) (Poset [Zero]) acc) result fields
     AssignAction (AST.ArrayIndex arr a1) a2 -> if (arithmeticSign a1 (State result) `infimum` Poset [Zero, Plus]) /= Poset [] then State $ M.insertWith supremum (ArrayID arr) (arithmeticSign a2 (State result)) result else bottom
-    AssignAction x rval -> State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
-    ReadAction lval -> State $ M.insert (lval2ID lval) top result
-    BoolAction rval -> if (foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))) == bottom then bottom else   State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))
+    AssignAction x rval -> if State result == bottom then bottom else State $ M.insert (lval2ID x) (arithmeticSign rval (State result)) result
+    ReadAction lval -> if State result == bottom then bottom else  State $ M.insert (lval2ID lval) top result
+    BoolAction rval -> if (foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))) == bottom
+                      then bottom
+                      else   State (M.filterWithKey (\k _ -> k `S.notMember` usedIDs) result) `supremum` foldr supremum bottom (filter (\s -> let Poset s' = boolSign rval s in S.member True s') $ basic (State $ M.filterWithKey (\k _ -> k `S.member` usedIDs) result))
       where
         usedIDs = S.fromList $ map lval2ID (action ^.. biplate :: [LValue 'CInt])
     _ -> State result -- write, jump
