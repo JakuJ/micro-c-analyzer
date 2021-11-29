@@ -106,7 +106,7 @@ data Branches
 
 evalAction :: Action -> Eval ()
 evalAction = \case
-  DeclAction   de     -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
+  DeclAction de       -> forM_ (def2IDs de) $ \d -> intOf d <~ Just <$> evalExpr (Literal 0)
   AssignAction lv rv  -> do
     v <- evalExpr rv
     lv .== v
@@ -323,9 +323,11 @@ intOf' = intOf . lval2ID
 -- | Assign a new interval to an 'LValue' in the abstract memory.
 --   Variables and records are overwritten, arrays are extended with `supremum`.
 (.==) :: LValue 'CInt -> Interval -> Eval ()
-lv .== r = case lv of
-  ArrayIndex _ _ -> intOf' lv %= fmap (supremum r)
-  _              -> intOf' lv ?= r
+lv .== r = do
+  ints <- use intervals
+  when (Abs ints /= bottom) $ case lv of
+    ArrayIndex _ _ -> intOf' lv %= fmap (supremum r)
+    _              -> intOf' lv ?= r
 
 bounds :: Interval -> (Int', Int')
 bounds x = (lowerBound x, upperBound x)
