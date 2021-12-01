@@ -13,12 +13,12 @@ ALEX_OPTS  = --ghc
 # Default goal.
 
 all : Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs
-	move Grammar src\Grammar
+	-del .\src\Grammar\Test.hs
 
 # Rules for building the parser.
 
 Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
-	bnfc --haskell -d Grammar.cf
+	bnfc --haskell -d Grammar.cf -o src
 
 %.hs : %.y
 	${HAPPY} ${HAPPY_OPTS} $<
@@ -27,7 +27,7 @@ Grammar/Abs.hs Grammar/Lex.x Grammar/Par.y Grammar/Print.hs : Grammar.cf
 	${ALEX} ${ALEX_OPTS} $<
 
 Grammar/Test : Grammar/Abs.hs Grammar/Lex.hs Grammar/Par.hs Grammar/Print.hs
-	${GHC} ${GHC_OPTS} $@ && del Grammar/Test.hs
+	${GHC} ${GHC_OPTS} $@ 
 
 # Rules for cleaning generated files.
 
